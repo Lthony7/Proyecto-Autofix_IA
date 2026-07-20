@@ -1,0 +1,3 @@
+<?php
+use Illuminate\Database\Migrations\Migration;use Illuminate\Database\Schema\Blueprint;use Illuminate\Support\Facades\Schema;
+return new class extends Migration{public function up():void{Schema::table('auditorias',function(Blueprint$table){$table->index('created_at');$table->index(['usuario_id','created_at']);$table->index(['accion','created_at']);$table->index(['recurso_tipo','created_at']);});}public function down():void{Schema::table('auditorias',function(Blueprint$table){$table->dropIndex(['created_at']);$table->dropIndex(['usuario_id','created_at']);$table->dropIndex(['accion','created_at']);$table->dropIndex(['recurso_tipo','created_at']);});}};

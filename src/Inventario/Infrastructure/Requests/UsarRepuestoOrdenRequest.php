@@ -1,0 +1,3 @@
+<?php
+namespace Src\Inventario\Infrastructure\Requests;use Illuminate\Foundation\Http\FormRequest;use Illuminate\Validation\Rule;
+class UsarRepuestoOrdenRequest extends FormRequest{public function authorize():bool{return$this->user()?->can('inventario.consumir')??false;}protected function prepareForValidation():void{$this->merge(['repuesto_id'=>$this->input('repuestoId')]);}public function rules():array{return['repuesto_id'=>['required','uuid',Rule::exists('repuestos','id')->where('estado','activo')],'cantidad'=>['required','decimal:0,3','gt:0'],'observaciones'=>['nullable','string','max:1000']];}}

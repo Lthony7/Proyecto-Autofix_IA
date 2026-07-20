@@ -1,0 +1,3 @@
+<?php
+use Illuminate\Support\Facades\Route;use Src\Facturacion\Application\Controllers\FacturacionWebController;
+Route::middleware('auth')->group(function(){Route::get('facturacion',[FacturacionWebController::class,'index'])->name('facturacion.index')->middleware('permission:facturas.ver');Route::get('facturacion/{factura}',[FacturacionWebController::class,'show'])->name('facturacion.show')->middleware('permission:facturas.ver');Route::post('ordenes/{orden}/factura',[FacturacionWebController::class,'store'])->name('facturacion.store')->middleware('permission:facturas.crear');Route::post('facturacion/{factura}/anular',[FacturacionWebController::class,'anular'])->name('facturacion.anular')->middleware('permission:facturas.editar');});

@@ -1,0 +1,4 @@
+<?php
+namespace Src\Pago\Infrastructure\Models;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;use Illuminate\Database\Eloquent\Model;use Illuminate\Database\Eloquent\Relations\BelongsTo;use Illuminate\Database\Eloquent\Relations\HasMany;use Src\OrdenTrabajo\Infrastructure\Models\OrdenTrabajoEloquentModel;
+class PagoEloquentModel extends Model{use HasUuids;protected $table='pagos';protected $fillable=['numero','orden_id','monto','moneda','metodo','referencia','comprobante_numero','observaciones','estado','pagado_en','registrado_por','anulado_en','anulado_por','motivo_anulacion'];protected function casts():array{return['monto'=>'decimal:2','pagado_en'=>'immutable_datetime','anulado_en'=>'immutable_datetime'];}public function orden():BelongsTo{return$this->belongsTo(OrdenTrabajoEloquentModel::class,'orden_id');}public function historial():HasMany{return$this->hasMany(PagoHistorialEloquentModel::class,'pago_id');}}
