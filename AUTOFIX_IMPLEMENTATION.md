@@ -209,3 +209,55 @@ La integración se configurará mediante `GROQ_ENABLED`, `GROQ_API_KEY`, `GROQ_A
 - Axios dejó de cargarse globalmente porque ninguna funcionalidad lo utiliza; Inertia mantiene su propio transporte HTTP.
 - Se retiraron del arranque los adaptadores globales de compatibilidad que no tenían consumidores.
 - El límite de advertencia se fija en 600 KB para reflejar el tamaño esperado del runtime UI agrupado, sin ocultar crecimientos inesperados en otros chunks.
+
+### Fase 14: pagos y facturación ampliados
+
+- Cada pago conserva monto, método, fecha, referencia, observaciones, responsable y número único de comprobante.
+- Cada nuevo pago congela conceptos, servicios, repuestos, descuento, impuesto, total, pagado acumulado y saldo resultante para que su comprobante no cambie con operaciones posteriores.
+- El comprobante presenta conceptos históricos, servicios, repuestos, descuento, impuesto, total, pago acumulado y saldo.
+- La vista del comprobante dispone de estilos de impresión y permite imprimir o guardar como PDF desde el navegador sin depender de servicios externos.
+- Los estados financieros se calculan como pendiente, parcial, pagado o vencido según pagos vigentes, saldo y fecha de vencimiento.
+- Los pagos anulados no se eliminan ni cuentan como ingreso y su motivo permanece disponible.
+- Administración puede ejecutar reembolsos totales como operaciones compensatorias; el pago pasa a `reembolsado`, conserva motivo, fecha y responsable, deja de contar como ingreso y restablece el saldo.
+- Cualquier descuento exige el permiso `descuentos.autorizar`, un motivo y el usuario autorizador; los datos se guardan en la misma transacción de emisión.
+- Las consultas de comprobantes financieros quedan registradas en auditoría.
+
+Verificación manual:
+
+1. Finalizar una orden con servicios o repuestos y emitir su factura.
+2. Registrar un pago inferior al saldo y confirmar el estado parcial.
+3. Abrir Pagos, seleccionar `Ver comprobante` y revisar la opción `Imprimir o guardar PDF`.
+4. Comprobar que Recepción no pueda introducir descuentos y que Administración deba justificar cualquier descuento mayor que cero.
+
+### Fase 15: historial vehicular
+
+- `Historial vehicular` aparece en el menú para usuarios con `historial.ver` y también desde cada tarjeta de vehículo.
+- La consulta agrupa cronológicamente órdenes, fechas, fallas, kilometraje, mecánicos actuales e históricos, diagnósticos versionados, recomendaciones, servicios y repuestos.
+- Los filtros admiten rango de fechas, estado de orden y servicio.
+- Los administradores y recepcionistas consultan todos los vehículos; los clientes solo sus vehículos y órdenes; los mecánicos solo vehículos con órdenes actualmente asignadas.
+- Los datos financieros se protegen de forma independiente mediante `historial.finanzas.ver` y nunca se entregan a mecánicos.
+- Servicios, precios, diagnósticos, pagos anulados y consumos revertidos conservan su señal histórica en lugar de eliminarse.
+
+Verificación manual:
+
+1. Entrar a `Historial vehicular` y buscar por placa o propietario.
+2. Abrir un vehículo con órdenes y aplicar filtros por fecha, estado y servicio.
+3. Confirmar con un usuario Cliente que no pueda abrir vehículos ajenos.
+4. Confirmar con un Mecánico que solo aparezcan órdenes asignadas y no se muestren costos.
+
+### Fase 16: reportes
+
+- `Reportes` ofrece órdenes pendientes, órdenes finalizadas, ingresos reales, servicios solicitados, repuestos utilizados y vehículos atendidos por cliente.
+- Los filtros globales incluyen fechas, estado, mecánico, cliente, vehículo y servicio.
+- Los ingresos usan exclusivamente pagos registrados; los pagos anulados quedan excluidos.
+- Los consumos revertidos quedan excluidos del reporte de repuestos.
+- Las tablas se limitan a los principales resultados y las consultas agregadas usan índices específicos para fechas, estados, servicios, repuestos y pagos.
+- La exportación CSV es compatible con Excel, incluye UTF-8, neutraliza fórmulas peligrosas y registra tipo, filtros y cantidad de filas en auditoría.
+- `reportes.financieros` controla los ingresos y `reportes.exportar` controla las descargas independientemente de `reportes.ver`.
+
+Verificación manual:
+
+1. Abrir Reportes y cambiar el rango de fechas.
+2. Aplicar filtros de cliente, vehículo, mecánico o servicio.
+3. Comparar el total de ingresos con pagos vigentes del mismo periodo.
+4. Exportar cada sección y confirmar el evento `reporte.exportado` en Auditoría.

@@ -4,7 +4,7 @@ import { createInertiaApp, router as inertiaRouter } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { ZiggyVue } from 'ziggy-js';
 import { Ziggy } from './ziggy';
-import { createRouter, createWebHistory } from 'vue-router';
+import { createMemoryHistory, createRouter } from 'vue-router';
 import Toast from 'vue-toastification';
 import 'vue-toastification/dist/index.css';
 
@@ -19,17 +19,21 @@ import NuxtUIPlugin from './plugins/nuxt-ui';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
-// Nuxt UI Dashboard consumes vue-router's current route internally. Inertia
-// remains responsible for requests; this router only mirrors the active URL.
+// Nuxt UI consumes vue-router's current route internally. Keep this router in
+// memory so it cannot compete with Inertia for the browser history.
 const uiRouter = createRouter({
-    history: createWebHistory(),
+    history: createMemoryHistory(),
     routes: [{ path: '/:pathMatch(.*)*', component: { render: () => null } }],
 });
+
+if (typeof window !== 'undefined') {
+    void uiRouter.replace(`${window.location.pathname}${window.location.search}${window.location.hash}`);
+}
 
 inertiaRouter.on('navigate', (event) => {
     const url = event.detail.page.url;
     if (uiRouter.currentRoute.value.fullPath !== url) {
-        uiRouter.replace(url);
+        void uiRouter.replace(url);
     }
 });
 

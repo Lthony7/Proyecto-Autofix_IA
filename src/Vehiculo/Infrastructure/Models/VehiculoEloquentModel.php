@@ -6,8 +6,10 @@ use App\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Src\Auth\Infrastructure\Models\UserEloquentModel;
 use Src\Cliente\Infrastructure\Models\ClienteEloquentModel;
+use Src\OrdenTrabajo\Infrastructure\Models\OrdenTrabajoEloquentModel;
 
 class VehiculoEloquentModel extends Model
 {
@@ -28,6 +30,11 @@ class VehiculoEloquentModel extends Model
     public function creadoPor(): BelongsTo
     {
         return $this->belongsTo(UserEloquentModel::class, 'creado_por');
+    }
+
+    public function ordenes(): HasMany
+    {
+        return $this->hasMany(OrdenTrabajoEloquentModel::class, 'vehiculo_id');
     }
 
     public function scopeVisiblePara(Builder $query, UserEloquentModel $usuario): Builder

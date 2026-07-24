@@ -11,11 +11,71 @@ const { can } = usePermissions()
 function filtrar() { router.get(route('mecanicos.index'), { buscar: buscar.value || undefined }, { preserveState: true, replace: true }) }
 function estado(m: Mecanico) { const nuevo = m.estado === 'activo' ? 'inactivo' : 'activo'; if (confirm(`¿Cambiar a ${nuevo} a ${m.nombres} ${m.apellidos}?`)) router.patch(route('mecanicos.estado', m.id), { estado: nuevo }, { preserveScroll: true }) }
 </script>
+
 <template>
   <Head title="Mecánicos" />
-  <UDashboardPanel><template #header><UDashboardNavbar title="Mecánicos"><template #leading><UDashboardSidebarCollapse /></template><template #right><UButton v-if="can('mecanicos.gestionar')" label="Nuevo mecánico" icon="i-lucide-plus" @click="router.visit(route('mecanicos.create'))" /></template></UDashboardNavbar></template><template #body>
-    <form class="flex gap-3" @submit.prevent="filtrar"><UInput v-model="buscar" class="w-full max-w-md" icon="i-lucide-search" placeholder="Nombre o documento" /><UButton type="submit" label="Buscar" /></form>
-    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3"><UCard v-for="m in mecanicos.data" :key="m.id"><div class="flex justify-between gap-3"><div><h2 class="font-semibold">{{ m.nombres }} {{ m.apellidos }}</h2><p class="text-sm text-muted">{{ m.tipoDocumento }} {{ m.numeroDocumento }}</p></div><UBadge :color="m.estado === 'activo' ? 'success' : 'neutral'">{{ m.estado }}</UBadge></div><div class="mt-4 space-y-2 text-sm"><p>{{ m.email }} · {{ m.telefono }}</p><div class="flex flex-wrap gap-1"><UBadge v-for="e in m.especialidades" :key="e" color="primary" variant="subtle">{{ e }}</UBadge></div><p class="text-muted">{{ m.horarios.length }} franjas disponibles</p></div><template #footer><div v-if="can('mecanicos.gestionar')" class="flex justify-end gap-2"><UButton label="Editar" size="sm" color="neutral" variant="ghost" @click="router.visit(route('mecanicos.edit', m.id))" /><UButton label="Cambiar estado" size="sm" color="neutral" variant="ghost" @click="estado(m)" /></div></template></UCard><UCard v-if="!mecanicos.data.length" class="md:col-span-2 xl:col-span-3"><p class="py-8 text-center text-muted">No hay mecánicos registrados.</p></UCard></div>
-    <div class="flex justify-end gap-2"><UButton label="Anterior" color="neutral" variant="outline" :disabled="!mecanicos.prev_page_url" @click="mecanicos.prev_page_url && router.visit(mecanicos.prev_page_url)" /><UButton label="Siguiente" color="neutral" variant="outline" :disabled="!mecanicos.next_page_url" @click="mecanicos.next_page_url && router.visit(mecanicos.next_page_url)" /></div>
-  </template></UDashboardPanel>
+  <UDashboardPanel>
+    <template #header>
+      <UDashboardNavbar title="Mecánicos">
+        <template #leading><UDashboardSidebarCollapse /></template>
+        <template #right><UButton v-if="can('mecanicos.gestionar')" label="Nuevo mecánico" icon="i-lucide-plus" @click="router.visit(route('mecanicos.create'))" /></template>
+      </UDashboardNavbar>
+    </template>
+    <template #body>
+      <form class="flex gap-3" @submit.prevent="filtrar">
+        <UInput v-model="buscar" class="w-full max-w-md" icon="i-lucide-search" placeholder="Nombre o documento" />
+        <UButton type="submit" label="Buscar" />
+      </form>
+
+      <div class="overflow-hidden rounded-lg border border-default">
+        <div class="hidden grid-cols-[minmax(12rem,1.2fr)_minmax(12rem,1fr)_minmax(12rem,1.2fr)_minmax(10rem,1fr)_auto] gap-4 border-b border-default bg-elevated/50 px-4 py-3 text-xs font-medium uppercase text-muted md:grid">
+          <span>Mecánico</span>
+          <span>Contacto</span>
+          <span>Especialidades</span>
+          <span>Disponibilidad</span>
+          <span class="text-right">Estado y acciones</span>
+        </div>
+        <div
+          v-for="m in mecanicos.data"
+          :key="m.id"
+          class="grid gap-4 border-b border-default px-4 py-4 last:border-b-0 md:grid-cols-[minmax(12rem,1.2fr)_minmax(12rem,1fr)_minmax(12rem,1.2fr)_minmax(10rem,1fr)_auto] md:items-center"
+        >
+          <div>
+            <p class="text-xs font-medium uppercase text-muted md:hidden">Mecánico</p>
+            <p class="font-semibold">{{ m.nombres }} {{ m.apellidos }}</p>
+            <p class="text-sm text-muted">{{ m.tipoDocumento }} {{ m.numeroDocumento }}</p>
+          </div>
+          <div class="text-sm">
+            <p class="text-xs font-medium uppercase text-muted md:hidden">Contacto</p>
+            <p class="break-all">{{ m.email }}</p>
+            <p class="text-muted">{{ m.telefono }}</p>
+          </div>
+          <div>
+            <p class="mb-1 text-xs font-medium uppercase text-muted md:hidden">Especialidades</p>
+            <div class="flex flex-wrap gap-1">
+              <UBadge v-for="e in m.especialidades" :key="e" color="primary" variant="subtle">{{ e }}</UBadge>
+              <span v-if="!m.especialidades.length" class="text-sm text-muted">Sin especialidades</span>
+            </div>
+          </div>
+          <div class="text-sm">
+            <p class="text-xs font-medium uppercase text-muted md:hidden">Disponibilidad</p>
+            <p>{{ m.horarios.length }} franjas disponibles</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 md:max-w-44 md:justify-end">
+            <UBadge :color="m.estado === 'activo' ? 'success' : 'neutral'">{{ m.estado }}</UBadge>
+            <template v-if="can('mecanicos.gestionar')">
+              <UButton label="Editar" size="sm" color="neutral" variant="ghost" @click="router.visit(route('mecanicos.edit', m.id))" />
+              <UButton label="Cambiar estado" size="sm" color="neutral" variant="ghost" @click="estado(m)" />
+            </template>
+          </div>
+        </div>
+        <p v-if="!mecanicos.data.length" class="px-4 py-12 text-center text-muted">No hay mecánicos registrados.</p>
+      </div>
+
+      <div class="flex justify-end gap-2">
+        <UButton label="Anterior" color="neutral" variant="outline" :disabled="!mecanicos.prev_page_url" @click="mecanicos.prev_page_url && router.visit(mecanicos.prev_page_url)" />
+        <UButton label="Siguiente" color="neutral" variant="outline" :disabled="!mecanicos.next_page_url" @click="mecanicos.next_page_url && router.visit(mecanicos.next_page_url)" />
+      </div>
+    </template>
+  </UDashboardPanel>
 </template>

@@ -18,6 +18,30 @@ const appConfig = useAppConfig()
 
 const colors = ['red', 'orange', 'amber', 'yellow', 'lime', 'green', 'emerald', 'teal', 'cyan', 'sky', 'blue', 'indigo', 'violet', 'purple', 'fuchsia', 'pink', 'rose']
 const neutrals = ['slate', 'gray', 'zinc', 'neutral', 'stone']
+const colorLabels: Record<string, string> = {
+  red: 'Rojo',
+  orange: 'Naranja',
+  amber: 'Ámbar',
+  yellow: 'Amarillo',
+  lime: 'Lima',
+  green: 'Verde',
+  emerald: 'Esmeralda',
+  teal: 'Verde azulado',
+  cyan: 'Cian',
+  sky: 'Celeste',
+  blue: 'Azul',
+  indigo: 'Índigo',
+  violet: 'Violeta',
+  purple: 'Morado',
+  fuchsia: 'Fucsia',
+  pink: 'Rosa',
+  rose: 'Rosado',
+  slate: 'Pizarra',
+  gray: 'Gris',
+  zinc: 'Zinc',
+  neutral: 'Neutro',
+  stone: 'Piedra'
+}
 
 const user = computed(() => {
   const authUser = (page.props as any).auth?.user as { name: string; email: string } | null
@@ -42,10 +66,10 @@ const items = computed<DropdownMenuItem[][]>(() => {
     label: authUser?.email || '',
     class: 'text-xs text-muted'
   }], [{
-  label: 'Theme',
+  label: 'Tema',
   icon: 'i-lucide-palette',
   children: [{
-    label: 'Primary',
+    label: 'Principal',
     slot: 'chip',
     chip: appConfig.value.ui.colors.primary,
     content: {
@@ -53,7 +77,7 @@ const items = computed<DropdownMenuItem[][]>(() => {
       collisionPadding: 16
     },
     children: colors.map(color => ({
-      label: color,
+      label: colorLabels[color],
       chip: color,
       slot: 'chip',
       checked: appConfig.value.ui.colors.primary === color,
@@ -65,7 +89,7 @@ const items = computed<DropdownMenuItem[][]>(() => {
       }
     }))
   }, {
-    label: 'Neutral',
+    label: 'Neutro',
     slot: 'chip',
     chip: appConfig.value.ui.colors.neutral === 'neutral' ? 'old-neutral' : appConfig.value.ui.colors.neutral,
     content: {
@@ -73,7 +97,7 @@ const items = computed<DropdownMenuItem[][]>(() => {
       collisionPadding: 16
     },
     children: neutrals.map(color => ({
-      label: color,
+      label: colorLabels[color],
       chip: color === 'neutral' ? 'old-neutral' : color,
       slot: 'chip',
       type: 'checkbox',
@@ -86,10 +110,10 @@ const items = computed<DropdownMenuItem[][]>(() => {
     }))
   }]
 }, {
-  label: 'Appearance',
+  label: 'Apariencia',
   icon: 'i-lucide-sun-moon',
   children: [{
-    label: 'Light',
+    label: 'Claro',
     icon: 'i-lucide-sun',
     type: 'checkbox',
     checked: colorMode.value === 'light',
@@ -99,7 +123,7 @@ const items = computed<DropdownMenuItem[][]>(() => {
       colorMode.value = 'light'
     }
   }, {
-    label: 'Dark',
+    label: 'Oscuro',
     icon: 'i-lucide-moon',
     type: 'checkbox',
     checked: colorMode.value === 'dark',
@@ -110,7 +134,7 @@ const items = computed<DropdownMenuItem[][]>(() => {
     }
   }],
 }, {
-  label: 'Log out',
+  label: 'Cerrar sesión',
   icon: 'i-lucide-log-out',
   onSelect: () => {
     router.post(route('logout'))

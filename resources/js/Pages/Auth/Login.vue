@@ -3,6 +3,7 @@ import { reactive, computed, ref } from 'vue'
 import { Head, router, usePage } from '@inertiajs/vue3'
 import { route } from 'ziggy-js'
 import FormField from '../../components/FormField.vue'
+import AutofixLogo from '../../components/AutofixLogo.vue'
 
 // Definir que esta página no usa layout
 defineOptions({
@@ -52,11 +53,9 @@ const handleSubmit = () => {
       <UCard>
         <template #header>
           <div class="flex items-center gap-3 mb-2">
-            <div class="flex items-center justify-center w-12 h-12 rounded-full bg-primary-100 dark:bg-primary-900">
-              <i class="i-lucide-lock text-primary-600 dark:text-primary-400 text-xl"></i>
-            </div>
+            <AutofixLogo class="h-16 w-20 shrink-0" />
             <div>
-              <h1 class="text-2xl font-bold">AUTOFIX IA</h1>
+              <h1 class="text-2xl font-bold">AUTOFIX</h1>
               <p class="text-sm text-muted">Ingresa tus credenciales para acceder al taller</p>
             </div>
           </div>

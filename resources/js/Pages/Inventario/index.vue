@@ -17,23 +17,36 @@ interface Movimiento {
 }
 interface Pagina<T> { data: T[]; links: { url: string | null; label: string; active: boolean }[]; total: number }
 
-const props = defineProps<{ repuestos: Pagina<Repuesto>; movimientos: Movimiento[]; categorias: Catalogo[]; proveedores: Proveedor[]; filtros:{buscar:string;estado:string;categoria:string;proveedor:string;bajo:boolean};stats:{total:number;bajos:number;agotados:number} }>()
+const props = defineProps<{ vista:string; repuestos: Pagina<Repuesto>; movimientos: Movimiento[]; categorias: Catalogo[]; proveedores: Proveedor[]; filtros:{buscar:string;estado:string;categoria:string;proveedor:string;bajo:boolean};stats:{total:number;bajos:number;agotados:number} }>()
 const { can } = usePermissions()
 const errors = computed<Record<string, string>>(() => usePage().props.errors as Record<string, string>)
 const procesando = ref(false)
-const filtros = reactive({...props.filtros})
+const filtros = reactive({
+  ...props.filtros,
+  estado: props.filtros.estado || 'todos',
+  categoria: props.filtros.categoria || 'todas',
+  proveedor: props.filtros.proveedor || 'todos'
+})
 const categoria = reactive({ nombre: '', descripcion: '' })
 const proveedor = reactive({ documento: '', nombre: '', contacto: '', telefono: '', email: '' })
 const repuesto = reactive({ categoriaId: '', proveedorId: '', codigo: '', nombre: '', descripcion: '', unidad: 'unidad', stockMinimo: '0.000', costoReferencia: '0.00', precioVenta: '0.00' })
 const movimiento = reactive({ repuestoId: '', tipo: 'entrada', cantidad: '', costoUnitario: '', motivo: '' })
 const opcionesRepuestos = computed(() => props.repuestos.data.filter(p => p.estado === 'activo').map(p => ({ label: `${p.codigo} · ${p.nombre} (${p.stock_actual} ${p.unidad})`, value: p.id })))
 const unidades = ['unidad', 'litro', 'metro', 'kilogramo', 'juego']
+const titulo = computed(() => ({
+  resumen: 'Inventario de repuestos',
+  'nueva-referencia': 'Nueva referencia',
+  'registrar-movimiento': 'Registrar movimiento',
+  'catalogos-auxiliares': 'Catálogos auxiliares',
+  catalogo: 'Catálogo de repuestos',
+  'ultimos-movimientos': 'Últimos movimientos'
+}[props.vista] || 'Inventario de repuestos'))
 
 function enviar(url: string, datos: object, limpiar: () => void) {
   procesando.value = true
   router.post(url, datos, { preserveScroll: true, onSuccess: limpiar, onFinish: () => { procesando.value = false } })
 }
-function buscar() { router.get(route('inventario.index'), { buscar:filtros.buscar||undefined,estado:filtros.estado||undefined,categoria:filtros.categoria||undefined,proveedor:filtros.proveedor||undefined,bajo:filtros.bajo?1:undefined }, { preserveState: true, replace:true }) }
+function buscar() { router.get(route('inventario.catalogo'), { buscar:filtros.buscar||undefined,estado:filtros.estado==='todos'?undefined:filtros.estado,categoria:filtros.categoria==='todas'?undefined:filtros.categoria,proveedor:filtros.proveedor==='todos'?undefined:filtros.proveedor,bajo:filtros.bajo?1:undefined }, { preserveState: true, replace:true }) }
 function guardarCategoria() { enviar(route('inventario.categorias.store'), categoria, () => Object.assign(categoria, { nombre: '', descripcion: '' })) }
 function guardarProveedor() { enviar(route('inventario.proveedores.store'), proveedor, () => Object.assign(proveedor, { documento: '', nombre: '', contacto: '', telefono: '', email: '' })) }
 function guardarRepuesto() { enviar(route('inventario.repuestos.store'), repuesto, () => Object.assign(repuesto, { categoriaId: '', proveedorId: '', codigo: '', nombre: '', descripcion: '', unidad: 'unidad', stockMinimo: '0.000', costoReferencia: '0.00', precioVenta: '0.00' })) }
@@ -43,19 +56,19 @@ function numero(valor: string, decimales = 2) { return Number(valor).toLocaleStr
 </script>
 
 <template>
-  <Head title="Inventario" />
+  <Head :title="titulo" />
   <UDashboardPanel>
-    <template #header><UDashboardNavbar title="Inventario de repuestos"><template #leading><UDashboardSidebarCollapse /></template></UDashboardNavbar></template>
+    <template #header><UDashboardNavbar :title="titulo"><template #leading><UDashboardSidebarCollapse /></template></UDashboardNavbar></template>
     <template #body>
       <div class="space-y-6">
-        <div class="grid gap-4 sm:grid-cols-3">
+        <div v-if="vista==='resumen'" class="grid gap-4 sm:grid-cols-3">
           <UCard><p class="text-sm text-muted">Referencias totales</p><p class="mt-1 text-3xl font-semibold">{{ stats.total }}</p></UCard>
           <UCard><p class="text-sm text-muted">Bajo stock global</p><p class="mt-1 text-3xl font-semibold" :class="stats.bajos ? 'text-warning' : 'text-success'">{{ stats.bajos }}</p></UCard>
           <UCard><p class="text-sm text-muted">Sin existencias</p><p class="mt-1 text-3xl font-semibold" :class="stats.agotados ? 'text-error' : ''">{{ stats.agotados }}</p></UCard>
         </div>
 
-        <div v-if="can('inventario.gestionar')" class="grid gap-6 xl:grid-cols-2">
-          <UCard>
+        <div v-if="can('inventario.gestionar')&&['resumen','nueva-referencia','registrar-movimiento'].includes(vista)" class="grid gap-6" :class="vista==='resumen'?'xl:grid-cols-2':'grid-cols-1'">
+          <section v-if="vista==='resumen'||vista==='nueva-referencia'" class="w-full"><UCard>
             <template #header><div><h2 class="font-semibold">Nueva referencia</h2><p class="text-sm text-muted">El saldo inicial se registra después como una entrada.</p></div></template>
             <form class="grid gap-4 sm:grid-cols-2" @submit.prevent="guardarRepuesto">
               <UFormField label="Código" required :error="errors.codigo"><UInput v-model="repuesto.codigo" class="w-full" /></UFormField>
@@ -69,9 +82,9 @@ function numero(valor: string, decimales = 2) { return Number(valor).toLocaleStr
               <UFormField class="sm:col-span-2" label="Descripción"><UTextarea v-model="repuesto.descripcion" class="w-full" /></UFormField>
               <div class="sm:col-span-2 text-right"><UButton type="submit" label="Crear repuesto" :loading="procesando" /></div>
             </form>
-          </UCard>
+          </UCard></section>
 
-          <UCard>
+          <section v-if="vista==='resumen'||vista==='registrar-movimiento'" class="w-full"><UCard>
             <template #header><div><h2 class="font-semibold">Registrar movimiento</h2><p class="text-sm text-muted">Las salidas de órdenes se registran desde la orden de trabajo.</p></div></template>
             <form class="space-y-4" @submit.prevent="registrarMovimiento">
               <UFormField label="Repuesto" required :error="errors.repuestoId"><USelect v-model="movimiento.repuestoId" :items="opcionesRepuestos" class="w-full" /></UFormField>
@@ -83,10 +96,10 @@ function numero(valor: string, decimales = 2) { return Number(valor).toLocaleStr
               <UFormField label="Motivo" required :error="errors.motivo"><UTextarea v-model="movimiento.motivo" class="w-full" placeholder="Compra, corrección por conteo físico..." /></UFormField>
               <div class="text-right"><UButton type="submit" label="Aplicar movimiento" :loading="procesando" /></div>
             </form>
-          </UCard>
+          </UCard></section>
         </div>
 
-        <UCard v-if="can('inventario.gestionar')">
+        <UCard v-if="can('inventario.gestionar')&&(vista==='resumen'||vista==='catalogos-auxiliares')" class="w-full">
           <template #header><div class="flex items-center justify-between"><h2 class="font-semibold">Catálogos auxiliares</h2><Link :href="route('inventario.catalogos')"><UButton size="sm" color="neutral" variant="outline" label="Administrar catálogos"/></Link></div></template>
           <div class="grid gap-6 lg:grid-cols-2">
             <form class="grid gap-3 sm:grid-cols-2" @submit.prevent="guardarCategoria">
@@ -105,20 +118,22 @@ function numero(valor: string, decimales = 2) { return Number(valor).toLocaleStr
           </div>
         </UCard>
 
-        <div class="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)]">
-          <section class="space-y-4">
-            <div><h2 class="mb-3 text-lg font-semibold">Catálogo</h2><form class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3" @submit.prevent="buscar"><UInput v-model="filtros.buscar" icon="i-lucide-search" placeholder="Código o nombre"/><USelect v-model="filtros.estado" :items="[{label:'Todos los estados',value:''},{label:'Activos',value:'activo'},{label:'Inactivos',value:'inactivo'},{label:'Archivados',value:'archivado'}]"/><USelect v-model="filtros.categoria" :items="[{label:'Todas las categorías',value:''},...categorias.map(c=>({label:c.nombre,value:c.id}))]"/><USelect v-model="filtros.proveedor" :items="[{label:'Todos los proveedores',value:''},...proveedores.map(p=>({label:p.nombre,value:p.id}))]"/><UCheckbox v-model="filtros.bajo" label="Solo bajo mínimo"/><UButton type="submit" label="Aplicar filtros" icon="i-lucide-list-filter"/></form></div>
-            <UCard v-for="p in repuestos.data" :key="p.id">
+        <div v-if="['resumen','catalogo','ultimos-movimientos'].includes(vista)" class="grid gap-6" :class="vista==='resumen'?'xl:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)]':'grid-cols-1'">
+          <section v-if="vista==='resumen'||vista==='catalogo'" class="space-y-4">
+            <div><h2 class="mb-3 text-lg font-semibold">Catálogo</h2><form class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3" @submit.prevent="buscar"><UInput v-model="filtros.buscar" icon="i-lucide-search" placeholder="Código o nombre"/><USelect v-model="filtros.estado" :items="[{label:'Todos los estados',value:'todos'},{label:'Activos',value:'activo'},{label:'Inactivos',value:'inactivo'},{label:'Archivados',value:'archivado'}]"/><USelect v-model="filtros.categoria" :items="[{label:'Todas las categorías',value:'todas'},...categorias.map(c=>({label:c.nombre,value:c.id}))]"/><USelect v-model="filtros.proveedor" :items="[{label:'Todos los proveedores',value:'todos'},...proveedores.map(p=>({label:p.nombre,value:p.id}))]"/><UCheckbox v-model="filtros.bajo" label="Solo bajo mínimo"/><UButton type="submit" label="Aplicar filtros" icon="i-lucide-list-filter"/></form></div>
+            <ul class="divide-y divide-default overflow-hidden rounded-lg border border-default bg-default">
+              <li v-for="p in repuestos.data" :key="p.id" class="p-4 transition-colors hover:bg-elevated/40">
               <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div><div class="flex flex-wrap items-center gap-2"><Link :href="route('inventario.repuestos.show',p.id)" class="font-semibold text-primary hover:underline">{{ p.codigo }} · {{ p.nombre }}</Link><UBadge :color="p.estado === 'activo' ? 'success' : 'neutral'">{{ p.estado }}</UBadge><UBadge v-if="Number(p.stock_actual) <= Number(p.stock_minimo)" color="warning" variant="subtle">Stock bajo</UBadge></div><p class="mt-1 text-sm text-muted">{{ p.categoria.nombre }} · {{ p.proveedor?.nombre || 'Sin proveedor' }} · {{ p.unidad }}</p><p v-if="p.descripcion" class="mt-2 text-sm">{{ p.descripcion }}</p></div>
                 <div class="shrink-0 text-left sm:text-right"><p class="text-2xl font-semibold">{{ numero(p.stock_actual, 3) }}</p><p class="text-xs text-muted">mínimo {{ numero(p.stock_minimo, 3) }}</p><p class="mt-2 text-sm">Venta $ {{ numero(p.precio_venta) }}</p><div v-if="can('inventario.gestionar')" class="mt-2 flex flex-wrap justify-end gap-1"><Link :href="route('inventario.repuestos.edit',p.id)"><UButton size="xs" color="neutral" variant="ghost" label="Editar"/></Link><UButton size="xs" color="neutral" variant="ghost" :label="p.estado==='activo'?'Desactivar':'Activar'" @click="cambiarEstado(p)"/><UButton v-if="p.estado!=='archivado'" size="xs" color="error" variant="ghost" label="Archivar" @click="cambiarEstado(p,'archivado')"/></div></div>
               </div>
-            </UCard>
-            <UCard v-if="!repuestos.data.length"><p class="py-6 text-center text-muted">No hay repuestos para mostrar.</p></UCard>
+              </li>
+              <li v-if="!repuestos.data.length" class="py-8 text-center text-muted">No hay repuestos para mostrar.</li>
+            </ul>
             <div class="flex flex-wrap gap-2"><Link v-for="link in repuestos.links" :key="link.label" :href="link.url || ''" preserve-scroll><UButton :disabled="!link.url" :variant="link.active ? 'solid' : 'outline'" color="neutral" size="sm"><span v-html="link.label" /></UButton></Link></div>
           </section>
 
-          <section><h2 class="mb-4 text-lg font-semibold">Últimos movimientos</h2><UCard><div v-for="m in movimientos" :key="m.id" class="border-b border-default py-3 first:pt-0 last:border-0 last:pb-0"><div class="flex items-start justify-between gap-3"><div><p class="text-sm font-medium">{{ m.repuesto.codigo }} · {{ m.repuesto.nombre }}</p><p class="mt-1 text-xs text-muted">{{ m.motivo }}</p><p class="mt-1 text-xs text-muted">{{new Date(m.created_at).toLocaleString('es-CO')}}</p></div><div class="text-right"><UBadge :color="Number(m.cantidad) > 0 ? 'success' : 'error'">{{ Number(m.cantidad) > 0 ? '+' : '' }}{{ numero(m.cantidad, 3) }}</UBadge><p class="mt-1 text-xs text-muted">saldo {{ numero(m.stock_resultante, 3) }}</p></div></div></div><p v-if="!movimientos.length" class="text-center text-muted">Sin movimientos.</p></UCard></section>
+          <section v-if="vista==='resumen'||vista==='ultimos-movimientos'"><h2 class="mb-4 text-lg font-semibold">Últimos movimientos</h2><ul class="divide-y divide-default overflow-hidden rounded-lg border border-default bg-default"><li v-for="m in movimientos" :key="m.id" class="p-4"><div class="flex items-start justify-between gap-3"><div><p class="text-sm font-medium">{{ m.repuesto.codigo }} · {{ m.repuesto.nombre }}</p><p class="mt-1 text-xs text-muted">{{ m.motivo }}</p><p class="mt-1 text-xs text-muted">{{new Date(m.created_at).toLocaleString('es-CO')}}</p></div><div class="text-right"><UBadge :color="Number(m.cantidad) > 0 ? 'success' : 'error'">{{ Number(m.cantidad) > 0 ? '+' : '' }}{{ numero(m.cantidad, 3) }}</UBadge><p class="mt-1 text-xs text-muted">saldo {{ numero(m.stock_resultante, 3) }}</p></div></div></li><li v-if="!movimientos.length" class="p-6 text-center text-muted">Sin movimientos.</li></ul></section>
         </div>
       </div>
     </template>

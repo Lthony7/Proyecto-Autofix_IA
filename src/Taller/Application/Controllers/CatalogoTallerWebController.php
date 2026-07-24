@@ -4,6 +4,7 @@ namespace Src\Taller\Application\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Src\Auditoria\Application\Services\RegistrarAuditoria;
@@ -15,9 +16,10 @@ use Src\Taller\Infrastructure\Requests\GuardarServicioRequest;
 
 class CatalogoTallerWebController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
         return Inertia::render('Taller/Catalogos', [
+            'vista' => $request->route('vista') ?? 'especialidades',
             'especialidades' => EspecialidadEloquentModel::withCount(['mecanicos' => fn ($q) => $q->where('mecanico_especialidad.activo', true), 'servicios'])->orderBy('nombre')->get(),
             'servicios' => ServicioEloquentModel::with('especialidad:id,nombre')->orderBy('nombre')->get()->map(fn ($s) => [
                 'id' => $s->id, 'especialidad' => $s->especialidad?->nombre, 'especialidadId' => $s->especialidad_id,

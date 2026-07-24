@@ -13,6 +13,8 @@ Route::middleware('auth')->group(function () {
     Route::patch('mecanicos/{mecanico}/estado', [MecanicoWebController::class, 'cambiarEstado'])->name('mecanicos.estado')->middleware('permission:mecanicos.gestionar');
 
     Route::get('taller/catalogos', [CatalogoTallerWebController::class, 'index'])->name('taller.catalogos')->middleware('permission:mecanicos.ver|especialidades.gestionar|servicios.gestionar');
+    Route::get('taller/especialidades', [CatalogoTallerWebController::class, 'index'])->defaults('vista', 'especialidades')->name('taller.especialidades')->middleware('permission:mecanicos.ver|especialidades.gestionar');
+    Route::get('taller/servicios', [CatalogoTallerWebController::class, 'index'])->defaults('vista', 'servicios')->name('taller.servicios')->middleware('permission:mecanicos.ver|servicios.gestionar');
     Route::post('taller/especialidades', [CatalogoTallerWebController::class, 'storeEspecialidad'])->name('especialidades.store')->middleware('permission:especialidades.gestionar');
     Route::patch('taller/especialidades/{especialidad}/estado', [CatalogoTallerWebController::class, 'estadoEspecialidad'])->name('especialidades.estado')->middleware('permission:especialidades.gestionar');
     Route::post('taller/servicios', [CatalogoTallerWebController::class, 'storeServicio'])->name('servicios.store')->middleware('permission:servicios.gestionar');

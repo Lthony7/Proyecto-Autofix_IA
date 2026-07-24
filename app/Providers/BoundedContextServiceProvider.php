@@ -20,6 +20,8 @@ class BoundedContextServiceProvider extends ServiceProvider
         'Inventario',
         'Pago',
         'Facturacion',
+        'HistorialVehicular',
+        'Reporte',
         'Categoria',
         'Producto',
         'Factura',
