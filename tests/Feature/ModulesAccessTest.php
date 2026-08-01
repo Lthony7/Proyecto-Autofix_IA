@@ -9,6 +9,8 @@ class ModulesAccessTest extends TestCase
     public function test_new_modules_require_authentication(): void
     {
         $this->get(route('historial-vehicular.index'))->assertRedirect(route('login'));
+        $this->get(route('historial-vehicular.bitacora'))->assertRedirect(route('login'));
+        $this->get(route('mi-historial.index'))->assertRedirect(route('login'));
         $this->get(route('reportes.index'))->assertRedirect(route('login'));
         $this->get(route('reportes.exportar', ['tipo' => 'servicios']))->assertRedirect(route('login'));
         foreach ([

@@ -29,6 +29,10 @@ function cambiarEstado(cliente: ClienteListado) {
   if (!window.confirm(`¿Deseas cambiar el estado de ${cliente.razonSocial} a ${estado}?`)) return
   router.patch(route('clientes.estado', cliente.id), { estado }, { preserveScroll: true })
 }
+
+function iniciales(nombre: string) {
+  return nombre.split(/\s+/).slice(0, 2).map(parte => parte[0]).join('').toUpperCase()
+}
 </script>
 
 <template>
@@ -43,10 +47,17 @@ function cambiarEstado(cliente: ClienteListado) {
       </UDashboardNavbar>
     </template>
     <template #body>
+      <section class="module-hero p-5 sm:p-7">
+        <div class="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div class="max-w-2xl"><div class="mb-3 flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-primary"><span class="size-1.5 rounded-full bg-primary shadow-[0_0_8px_var(--ui-primary)]"/>Directorio del taller</div><h1 class="text-3xl font-black tracking-tight sm:text-4xl">Relaciones que mueven<br><span class="text-primary">cada servicio.</span></h1><p class="mt-3 max-w-xl text-sm leading-6 text-muted">Administra propietarios, datos de contacto y vehículos vinculados desde un directorio centralizado.</p></div>
+          <div class="flex items-center gap-3 rounded-xl border border-primary/15 bg-default/65 px-4 py-3 backdrop-blur"><span class="grid size-10 place-items-center rounded-lg bg-primary/12 text-primary"><UIcon name="i-lucide-users-round" class="size-5"/></span><div><p class="text-xs uppercase tracking-wide text-muted">Cobertura actual</p><p class="font-semibold">{{stats.active}} clientes activos</p></div></div>
+        </div>
+      </section>
+
       <div class="grid gap-3 sm:grid-cols-3">
-        <UCard><p class="text-sm text-muted">Total</p><p class="text-2xl font-semibold">{{ stats.total }}</p></UCard>
-        <UCard><p class="text-sm text-muted">Activos</p><p class="text-2xl font-semibold text-success">{{ stats.active }}</p></UCard>
-        <UCard><p class="text-sm text-muted">Inactivos o archivados</p><p class="text-2xl font-semibold">{{ stats.inactive }}</p></UCard>
+        <UCard class="metric-tile"><div class="flex items-start justify-between"><div><p class="text-xs font-bold uppercase tracking-[0.13em] text-muted">Total registrados</p><p class="mt-3 text-3xl font-black">{{ stats.total }}</p></div><span class="grid size-11 place-items-center rounded-xl bg-primary/10 text-primary"><UIcon name="i-lucide-contact-round" class="size-5"/></span></div><div class="mt-4 h-0.5 rounded-full bg-elevated"><span class="block h-full w-2/3 rounded-full bg-primary"/></div></UCard>
+        <UCard class="metric-tile"><div class="flex items-start justify-between"><div><p class="text-xs font-bold uppercase tracking-[0.13em] text-muted">Activos</p><p class="mt-3 text-3xl font-black text-success">{{ stats.active }}</p></div><span class="grid size-11 place-items-center rounded-xl bg-emerald-500/10 text-emerald-500"><UIcon name="i-lucide-user-check" class="size-5"/></span></div><div class="mt-4 h-0.5 rounded-full bg-elevated"><span class="block h-full rounded-full bg-emerald-500" :style="{width:`${stats.total?Math.max(8,(stats.active/stats.total)*100):0}%`}"/></div></UCard>
+        <UCard class="metric-tile"><div class="flex items-start justify-between"><div><p class="text-xs font-bold uppercase tracking-[0.13em] text-muted">Inactivos o archivados</p><p class="mt-3 text-3xl font-black">{{ stats.inactive }}</p></div><span class="grid size-11 place-items-center rounded-xl bg-neutral-500/10 text-muted"><UIcon name="i-lucide-user-round-x" class="size-5"/></span></div><div class="mt-4 h-0.5 rounded-full bg-elevated"><span class="block h-full rounded-full bg-neutral-500" :style="{width:`${stats.inactive&&stats.total?Math.max(8,(stats.inactive/stats.total)*100):0}%`}"/></div></UCard>
       </div>
 
       <form class="flex flex-col gap-3 sm:flex-row" @submit.prevent="buscar">
@@ -55,22 +66,22 @@ function cambiarEstado(cliente: ClienteListado) {
         <UButton type="submit" label="Filtrar" icon="i-lucide-list-filter" />
       </form>
 
-      <div class="overflow-x-auto rounded-lg border border-default">
+      <div class="overflow-x-auto rounded-xl border border-default shadow-sm">
         <table class="min-w-[850px] w-full text-sm">
-          <thead class="bg-elevated/60 text-left"><tr><th class="p-3">Cliente</th><th class="p-3">Documento</th><th class="p-3">Contacto</th><th class="p-3">Vehículos</th><th class="p-3">Estado</th><th class="p-3 text-right">Acciones</th></tr></thead>
+          <thead class="bg-elevated/60 text-left"><tr><th class="p-4">Cliente</th><th class="p-4">Documento</th><th class="p-4">Contacto</th><th class="p-4">Vehículos</th><th class="p-4">Estado</th><th class="p-4 text-right">Acciones</th></tr></thead>
           <tbody>
             <tr v-for="cliente in customers.data" :key="cliente.id" class="border-t border-default">
-              <td class="p-3 font-medium">{{ cliente.razonSocial }}</td>
-              <td class="p-3">{{ cliente.tipoDocumento }} {{ cliente.numeroDocumento }}</td>
-              <td class="p-3"><p>{{ cliente.email }}</p><p class="text-muted">{{ cliente.telefono }}</p></td>
-              <td class="p-3">{{ cliente.vehiculosCount }}</td>
-              <td class="p-3"><UBadge :color="cliente.estado === 'activo' ? 'success' : 'neutral'" variant="subtle">{{ cliente.estado }}</UBadge></td>
-              <td class="p-3 text-right space-x-2">
-                <UButton v-if="can('clientes.editar')" size="sm" color="neutral" variant="ghost" icon="i-lucide-pencil" aria-label="Editar cliente" @click="router.visit(route('clientes.edit', cliente.id))" />
-                <UButton v-if="can('clientes.desactivar')" size="sm" color="neutral" variant="ghost" :icon="cliente.estado === 'activo' ? 'i-lucide-user-x' : 'i-lucide-user-check'" aria-label="Cambiar estado" @click="cambiarEstado(cliente)" />
+              <td class="p-4"><div class="flex items-center gap-3"><span class="grid size-10 shrink-0 place-items-center rounded-xl border border-primary/15 bg-primary/10 font-mono text-xs font-black text-primary">{{iniciales(cliente.razonSocial)}}</span><div><p class="font-semibold text-highlighted">{{ cliente.razonSocial }}</p><p class="text-xs text-muted">Cliente #{{cliente.id.slice(0,8).toUpperCase()}}</p></div></div></td>
+              <td class="p-4"><p class="font-medium">{{ cliente.numeroDocumento }}</p><p class="text-xs uppercase text-muted">{{ cliente.tipoDocumento }}</p></td>
+              <td class="p-4"><p class="font-medium">{{ cliente.email||'Sin correo' }}</p><p class="mt-0.5 flex items-center gap-1 text-xs text-muted"><UIcon name="i-lucide-phone" class="size-3"/>{{ cliente.telefono||'Sin teléfono' }}</p></td>
+              <td class="p-4"><span class="inline-flex items-center gap-2 rounded-lg bg-elevated px-2.5 py-1.5 font-mono font-bold"><UIcon name="i-lucide-car-front" class="size-4 text-primary"/>{{ cliente.vehiculosCount }}</span></td>
+              <td class="p-4"><UBadge :color="cliente.estado === 'activo' ? 'success' : 'neutral'" variant="subtle"><span class="mr-1 size-1.5 rounded-full bg-current"/>{{ cliente.estado }}</UBadge></td>
+              <td class="p-4 text-right space-x-2">
+                <UButton v-if="can('clientes.editar')" size="sm" color="neutral" variant="soft" icon="i-lucide-pencil" aria-label="Editar cliente" @click="router.visit(route('clientes.edit', cliente.id))" />
+                <UButton v-if="can('clientes.desactivar')" size="sm" :color="cliente.estado === 'activo' ? 'error' : 'success'" variant="soft" :icon="cliente.estado === 'activo' ? 'i-lucide-user-x' : 'i-lucide-user-check'" aria-label="Cambiar estado" @click="cambiarEstado(cliente)" />
               </td>
             </tr>
-            <tr v-if="!customers.data.length"><td colspan="6" class="p-10 text-center text-muted">No hay clientes que coincidan con los filtros.</td></tr>
+            <tr v-if="!customers.data.length"><td colspan="6" class="p-12 text-center"><span class="mx-auto grid size-14 place-items-center rounded-full bg-primary/10 text-primary"><UIcon name="i-lucide-search-x" class="size-7"/></span><p class="mt-3 font-semibold">No encontramos clientes</p><p class="mt-1 text-sm text-muted">Prueba con otros términos o limpia los filtros aplicados.</p></td></tr>
           </tbody>
         </table>
       </div>

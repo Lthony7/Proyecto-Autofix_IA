@@ -231,19 +231,23 @@ Verificación manual:
 
 ### Fase 15: historial vehicular
 
-- `Historial vehicular` aparece en el menú para usuarios con `historial.ver` y también desde cada tarjeta de vehículo.
-- La consulta agrupa cronológicamente órdenes, fechas, fallas, kilometraje, mecánicos actuales e históricos, diagnósticos versionados, recomendaciones, servicios y repuestos.
-- Los filtros admiten rango de fechas, estado de orden y servicio.
-- Los administradores y recepcionistas consultan todos los vehículos; los clientes solo sus vehículos y órdenes; los mecánicos solo vehículos con órdenes actualmente asignadas.
-- Los datos financieros se protegen de forma independiente mediante `historial.finanzas.ver` y nunca se entregan a mecánicos.
+- `Historial de servicios` aparece para personal autorizado y `Mi Historial de Servicios` ofrece al Cliente una ruta exclusiva, siempre limitada mediante `visiblePara()` en el backend.
+- La consulta agrupa cronológicamente órdenes, fechas, fallas, kilometraje, mecánicos actuales e históricos, diagnósticos versionados, trabajos, servicios, repuestos, mano de obra, pagos y factura asociada.
+- Los filtros admiten búsqueda en tiempo real, rango de fechas, estado, servicio y orden cronológico, con paginación y detalle expandible.
+- `Bitácora vehicular` registra automáticamente creación y edición del vehículo, cambio de propietario o estado, creación de orden, asignación de mecánicos, diagnósticos y finalización de servicios.
+- Cada evento congela usuario, rol, fecha, vehículo, descripción, cambios, IP y agente de usuario. El modelo bloquea actualizaciones y eliminaciones.
+- Administradores y recepcionistas consultan todos los vehículos y la bitácora; clientes solo sus vehículos y órdenes; mecánicos solo vehículos con órdenes actualmente asignadas.
+- Los datos financieros se protegen mediante `historial.finanzas.ver` y nunca se entregan a mecánicos.
+- Los permisos independientes son `historial.servicios.ver`, `historial.acciones.ver`, `historial.tecnico.registrar` e `historial.finanzas.ver`.
 - Servicios, precios, diagnósticos, pagos anulados y consumos revertidos conservan su señal histórica en lugar de eliminarse.
 
 Verificación manual:
 
-1. Entrar a `Historial vehicular` y buscar por placa o propietario.
-2. Abrir un vehículo con órdenes y aplicar filtros por fecha, estado y servicio.
+1. Entrar a `Historial de servicios` y buscar por placa o propietario.
+2. Abrir un vehículo con órdenes y aplicar búsqueda, fechas, estado, servicio y ordenamiento.
 3. Confirmar con un usuario Cliente que no pueda abrir vehículos ajenos.
 4. Confirmar con un Mecánico que solo aparezcan órdenes asignadas y no se muestren costos.
+5. Crear o editar un vehículo y comprobar el evento inalterable en `Bitácora vehicular`.
 
 ### Fase 16: reportes
 

@@ -10,5 +10,5 @@ Route::middleware('auth')->group(function(){
     Route::patch('ordenes/{orden}/mecanicos',[OrdenTrabajoWebController::class,'asignar'])->name('ordenes.asignar')->middleware('permission:ordenes.asignar');
     Route::patch('ordenes/{orden}/estado',[OrdenTrabajoWebController::class,'cambiarEstado'])->name('ordenes.estado')->middleware('permission:ordenes.avanzar|ordenes.cancelar');
     Route::patch('ordenes/{orden}/servicios/{servicio}/estado',[OrdenTrabajoWebController::class,'cambiarEstadoServicio'])->name('ordenes.servicios.estado')->middleware('permission:ordenes.avanzar');
-    Route::post('ordenes/{orden}/diagnosticos',[OrdenTrabajoWebController::class,'diagnosticar'])->name('ordenes.diagnosticar')->middleware('permission:diagnosticos.registrar');
+    Route::post('ordenes/{orden}/diagnosticos',[OrdenTrabajoWebController::class,'diagnosticar'])->name('ordenes.diagnosticar')->middleware(['permission:diagnosticos.registrar','permission:historial.tecnico.registrar']);
 });

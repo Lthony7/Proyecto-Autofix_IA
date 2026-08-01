@@ -13,6 +13,7 @@ const appConfig = useAppConfig()
 const page = usePage()
 const { can, canAny } = usePermissions()
 const expandedMenus = reactive(new Set<string>())
+const esCliente = computed(() => ((page.props.auth as any)?.user?.roles ?? []).includes('Cliente'))
 
 useFlash()
 
@@ -28,14 +29,14 @@ const toggleMenu = (item: { label: string; url: string; active: boolean }) => {
 const links = computed(() => [[
   {
     label: 'Inicio',
-    icon: 'i-lucide-house',
+    icon: 'i-lucide-layout-dashboard',
     url: '/dashboard',
     active: page.url.startsWith('/dashboard'),
     onSelect: () => navigateTo('/dashboard')
   },
   ...(can('clientes.ver') ? [{
     label: 'Clientes',
-    icon: 'i-lucide-users-round',
+    icon: 'i-lucide-contact-round',
     url: '/clientes',
     active: page.url.startsWith('/clientes'),
     onSelect: () => navigateTo('/clientes')
@@ -48,84 +49,91 @@ const links = computed(() => [[
     onSelect: () => navigateTo('/vehiculos')
   }] : []),
   ...(can('historial.ver') ? [{
-    label: 'Historial vehicular',
-    icon: 'i-lucide-notebook-tabs',
-    url: '/historial-vehicular',
-    active: page.url.startsWith('/historial-vehicular'),
-    onSelect: () => navigateTo('/historial-vehicular')
+    label: esCliente.value ? 'Mi Historial de Servicios' : 'Historial de servicios',
+    icon: 'i-lucide-wrench',
+    url: esCliente.value ? '/mi-historial' : '/historial-vehicular',
+    active: esCliente.value ? page.url.startsWith('/mi-historial') : page.url.startsWith('/historial-vehicular') && !page.url.startsWith('/historial-vehicular-bitacora'),
+    onSelect: () => navigateTo(esCliente.value ? '/mi-historial' : '/historial-vehicular')
+  }] : []),
+  ...(can('historial.acciones.ver') ? [{
+    label: 'Bitácora vehicular',
+    icon: 'i-lucide-file-clock',
+    url: '/historial-vehicular-bitacora',
+    active: page.url.startsWith('/historial-vehicular-bitacora'),
+    onSelect: () => navigateTo('/historial-vehicular-bitacora')
   }] : []),
   ...(can('citas.ver') ? [{
     label: 'Citas',
-    icon: 'i-lucide-calendar-days',
+    icon: 'i-lucide-calendar-clock',
     url: '/citas',
     active: page.url.startsWith('/citas'),
     onSelect: () => navigateTo('/citas')
   }] : []),
   ...(can('ordenes.ver') ? [{
     label: 'Órdenes de trabajo',
-    icon: 'i-lucide-clipboard-wrench',
+    icon: 'i-lucide-clipboard-list',
     url: '/ordenes',
     active: page.url.startsWith('/ordenes'),
     onSelect: () => navigateTo('/ordenes')
   }] : []),
   ...(canAny(['ia.solicitar', 'ia.revisar']) ? [{
     label: 'Asistente IA',
-    icon: 'i-lucide-sparkles',
+    icon: 'i-lucide-bot',
     url: '/asistente-ia',
     active: page.url.startsWith('/asistente-ia'),
     onSelect: () => navigateTo('/asistente-ia')
   }] : []),
   ...(can('inventario.ver') ? [{
     label: 'Inventario',
-    icon: 'i-lucide-package-search',
+    icon: 'i-lucide-warehouse',
     url: '/inventario/catalogo-repuestos',
     active: page.url.startsWith('/inventario'),
     onSelect: () => navigateTo('/inventario'),
     children: [
       ...(can('inventario.gestionar') ? [
-        { label: 'Nueva referencia', url: '/inventario/nueva-referencia' },
-        { label: 'Registrar movimiento', url: '/inventario/registrar-movimiento' },
-        { label: 'Catálogos auxiliares', url: '/inventario/catalogos-auxiliares' }
+        { label: 'Nueva referencia', icon: 'i-lucide-package-plus', url: '/inventario/nueva-referencia' },
+        { label: 'Registrar movimiento', icon: 'i-lucide-arrow-left-right', url: '/inventario/registrar-movimiento' },
+        { label: 'Catálogos auxiliares', icon: 'i-lucide-library-big', url: '/inventario/catalogos-auxiliares' }
       ] : []),
-      { label: 'Catálogo de repuestos', url: '/inventario/catalogo-repuestos' },
-      { label: 'Últimos movimientos', url: '/inventario/ultimos-movimientos' }
+      { label: 'Catálogo de repuestos', icon: 'i-lucide-boxes', url: '/inventario/catalogo-repuestos' },
+      { label: 'Últimos movimientos', icon: 'i-lucide-history', url: '/inventario/ultimos-movimientos' }
     ]
   }] : []),
   ...(can('pagos.ver') ? [{
     label: 'Pagos',
-    icon: 'i-lucide-wallet-cards',
+    icon: 'i-lucide-badge-dollar-sign',
     url: '/pagos',
     active: page.url.startsWith('/pagos'),
     onSelect: () => navigateTo('/pagos')
   }] : []),
   ...(can('usuarios.ver') ? [{
     label: 'Usuarios',
-    icon: 'i-lucide-shield-user',
+    icon: 'i-lucide-users',
     url: '/usuarios',
     active: page.url.startsWith('/usuarios'),
     onSelect: () => navigateTo('/usuarios')
   }] : []),
   ...(can('auditorias.ver') ? [{
     label: 'Auditoría',
-    icon: 'i-lucide-history',
+    icon: 'i-lucide-shield-check',
     url: '/auditorias',
     active: page.url.startsWith('/auditorias'),
     onSelect: () => navigateTo('/auditorias')
   }] : []),
   ...(can('reportes.ver') ? [{
     label: 'Reportes',
-    icon: 'i-lucide-chart-no-axes-combined',
+    icon: 'i-lucide-chart-column-big',
     url: '/reportes/filtros',
     active: page.url.startsWith('/reportes'),
     onSelect: () => navigateTo('/reportes'),
     children: [
-      { label: 'Filtros globales', url: '/reportes/filtros' },
-      { label: 'Órdenes pendientes', url: '/reportes/ordenes-pendientes' },
-      { label: 'Órdenes finalizadas', url: '/reportes/ordenes-finalizadas' },
-      ...(can('reportes.financieros') ? [{ label: 'Ingresos por fecha', url: '/reportes/ingresos' }] : []),
-      { label: 'Servicios solicitados', url: '/reportes/servicios' },
-      { label: 'Repuestos utilizados', url: '/reportes/repuestos' },
-      { label: 'Vehículos por cliente', url: '/reportes/vehiculos-clientes' }
+      { label: 'Filtros globales', icon: 'i-lucide-list-filter', url: '/reportes/filtros' },
+      { label: 'Órdenes pendientes', icon: 'i-lucide-hourglass', url: '/reportes/ordenes-pendientes' },
+      { label: 'Órdenes finalizadas', icon: 'i-lucide-circle-check-big', url: '/reportes/ordenes-finalizadas' },
+      ...(can('reportes.financieros') ? [{ label: 'Ingresos por fecha', icon: 'i-lucide-chart-no-axes-combined', url: '/reportes/ingresos' }] : []),
+      { label: 'Servicios solicitados', icon: 'i-lucide-wrench', url: '/reportes/servicios' },
+      { label: 'Repuestos utilizados', icon: 'i-lucide-package-check', url: '/reportes/repuestos' },
+      { label: 'Vehículos por cliente', icon: 'i-lucide-car-front', url: '/reportes/vehiculos-clientes' }
     ]
   }] : []),
   ...(can('mecanicos.ver') ? [{
@@ -137,18 +145,18 @@ const links = computed(() => [[
   }] : []),
   ...(canAny(['mecanicos.ver', 'especialidades.gestionar', 'servicios.gestionar']) ? [{
     label: 'Servicios del taller',
-    icon: 'i-lucide-settings',
+    icon: 'i-lucide-settings-2',
     url: '/taller/especialidades',
     active: page.url.startsWith('/taller'),
     onSelect: () => navigateTo('/taller/catalogos'),
     children: [
-      { label: 'Especialidades', url: '/taller/especialidades' },
-      { label: 'Catálogo de servicios', url: '/taller/servicios' }
+      { label: 'Especialidades', icon: 'i-lucide-badge-check', url: '/taller/especialidades' },
+      { label: 'Catálogo de servicios', icon: 'i-lucide-notebook-tabs', url: '/taller/servicios' }
     ]
   }] : []),
   ...(can('facturas.ver') ? [{
     label: 'Facturación',
-    icon: 'i-lucide-file-text',
+    icon: 'i-lucide-receipt-text',
     url: '/facturacion',
     active: page.url.startsWith('/facturacion'),
     onSelect: () => navigateTo('/facturacion')
@@ -169,46 +177,52 @@ const groups = computed(() => [{
 <template>
   <UApp :primary="appConfig.ui.colors.primary" :neutral="appConfig.ui.colors.neutral">
     <UDashboardGroup unit="rem">
-      <aside class="hidden h-full w-64 shrink-0 flex-col border-r border-default bg-elevated/40 md:flex">
-        <div class="border-b border-default p-3">
+      <aside class="sidebar-shell hidden h-full w-64 shrink-0 flex-col border-r border-default bg-elevated/55 shadow-xl shadow-black/5 backdrop-blur-xl md:flex">
+        <div class="border-b border-default bg-gradient-to-b from-primary/5 to-transparent p-3">
           <TeamsMenu />
         </div>
 
-        <nav class="flex-1 space-y-1 overflow-y-auto p-3" aria-label="Navegación principal">
-          <div v-for="item in links[0]" :key="item.label">
+        <nav class="flex-1 space-y-1.5 overflow-y-auto px-3 py-4" aria-label="Navegación principal">
+          <p class="mb-3 px-3 font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-dimmed">Navegación</p>
+          <div v-for="item in links[0]" :key="item.label" class="relative">
             <button
               v-if="item.children?.length"
               type="button"
-              class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors"
-              :class="item.active || expandedMenus.has(item.label) ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-elevated hover:text-highlighted'"
+              class="group relative flex min-h-11 w-full items-center gap-2.5 overflow-hidden rounded-xl border border-transparent px-2.5 py-2 text-left text-sm font-semibold transition-all duration-200 ease-out"
+              :class="item.active || expandedMenus.has(item.label) ? 'border-primary/20 bg-gradient-to-r from-primary/18 to-primary/5 text-primary shadow-sm shadow-primary/5' : 'text-muted hover:translate-x-0.5 hover:border-default hover:bg-default/70 hover:text-highlighted hover:shadow-sm'"
               :aria-expanded="expandedMenus.has(item.label)"
               @click="toggleMenu(item)"
             >
-              <i :class="[item.icon, 'size-5 shrink-0']" aria-hidden="true" />
+              <span v-if="item.active || expandedMenus.has(item.label)" class="absolute inset-y-2 left-0 w-0.5 rounded-full bg-primary shadow-[0_0_8px_var(--ui-primary)]"/>
+              <span class="grid size-8 shrink-0 place-items-center rounded-lg border transition-colors duration-200" :class="item.active || expandedMenus.has(item.label) ? 'border-primary/15 bg-primary/12' : 'border-transparent bg-elevated group-hover:border-default group-hover:bg-default'"><UIcon :name="item.icon" class="size-[18px]" aria-hidden="true" /></span>
               <span class="flex-1">{{ item.label }}</span>
-              <i :class="[expandedMenus.has(item.label) ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right', 'size-4']" aria-hidden="true" />
+              <span class="grid size-7 place-items-center rounded-md bg-default/45"><UIcon name="i-lucide-chevron-right" class="size-3.5 transition-transform duration-300 ease-out" :class="expandedMenus.has(item.label) ? 'rotate-90' : ''" aria-hidden="true" /></span>
             </button>
             <Link
               v-else
               :href="item.url"
-              class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors"
-              :class="item.active ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-elevated hover:text-highlighted'"
+              class="group relative flex min-h-11 w-full items-center gap-2.5 overflow-hidden rounded-xl border border-transparent px-2.5 py-2 text-left text-sm font-semibold transition-all duration-200 ease-out"
+              :class="item.active ? 'border-primary/20 bg-gradient-to-r from-primary/18 to-primary/5 text-primary shadow-sm shadow-primary/5' : 'text-muted hover:translate-x-0.5 hover:border-default hover:bg-default/70 hover:text-highlighted hover:shadow-sm'"
             >
-              <i :class="[item.icon, 'size-5 shrink-0']" aria-hidden="true" />
-              <span>{{ item.label }}</span>
+              <span v-if="item.active" class="absolute inset-y-2 left-0 w-0.5 rounded-full bg-primary shadow-[0_0_8px_var(--ui-primary)]"/>
+              <span class="grid size-8 shrink-0 place-items-center rounded-lg border transition-colors duration-200" :class="item.active ? 'border-primary/15 bg-primary/12' : 'border-transparent bg-elevated group-hover:border-default group-hover:bg-default'"><UIcon :name="item.icon" class="size-[18px]" aria-hidden="true" /></span>
+              <span class="flex-1">{{ item.label }}</span>
             </Link>
-            <div v-if="item.children?.length && expandedMenus.has(item.label)" class="ml-5 mt-1 space-y-1 border-l border-default pl-3">
-              <Link
-                v-for="child in item.children"
-                :key="child.url"
-                :href="child.url"
-                class="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs transition-colors"
-                :class="page.url.startsWith(child.url) ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-elevated hover:text-highlighted'"
-              >
-                <i class="i-lucide-corner-down-right -ml-4 size-3.5 shrink-0 text-dimmed" aria-hidden="true" />
-                <span>{{ child.label }}</span>
-              </Link>
-            </div>
+            <Transition name="submenu">
+              <div v-if="item.children?.length && expandedMenus.has(item.label)" class="submenu-tree relative ml-4 mt-1.5 space-y-1 pb-1 pl-7">
+                <Link
+                  v-for="child in item.children"
+                  :key="child.url"
+                  :href="child.url"
+                  class="submenu-link group/child relative flex min-h-9 w-full items-center rounded-lg border border-transparent px-3 py-2 text-left text-[13px] font-medium transition-all duration-200"
+                  :class="page.url.startsWith(child.url) ? 'border-primary/15 bg-primary/10 text-primary shadow-sm' : 'text-muted hover:translate-x-0.5 hover:border-default hover:bg-default/65 hover:text-highlighted'"
+                >
+                  <span class="tree-branch" :class="page.url.startsWith(child.url) ? 'tree-branch-active' : ''" aria-hidden="true"/>
+                  <span class="mr-2 grid size-6 shrink-0 place-items-center rounded-md border transition-all" :class="page.url.startsWith(child.url) ? 'border-primary/20 bg-primary/15 text-primary shadow-sm' : 'border-default bg-elevated text-dimmed group-hover/child:border-primary/15 group-hover/child:text-primary'"><UIcon :name="child.icon" class="size-3.5" aria-hidden="true"/></span>
+                  <span>{{ child.label }}</span>
+                </Link>
+              </div>
+            </Transition>
           </div>
         </nav>
 
@@ -218,7 +232,7 @@ const groups = computed(() => [{
       </aside>
 
       <UButton
-        class="fixed bottom-4 left-4 z-50 md:hidden"
+        class="fixed bottom-4 left-4 z-50 rounded-xl shadow-xl shadow-black/20 md:hidden"
         label="Menú"
         icon="i-lucide-menu"
         size="lg"
@@ -227,37 +241,42 @@ const groups = computed(() => [{
 
       <USlideover v-model:open="open" title="AUTOFIX" description="Navegación principal" side="left">
         <template #content>
-          <div class="flex h-full flex-col bg-default">
-            <div class="flex items-center justify-between border-b border-default p-3">
+          <div class="sidebar-shell flex h-full flex-col bg-default/95 backdrop-blur-xl">
+            <div class="flex items-center justify-between border-b border-default bg-gradient-to-b from-primary/5 to-transparent p-3">
               <TeamsMenu />
               <UButton icon="i-lucide-x" color="neutral" variant="ghost" aria-label="Cerrar menú" @click="open = false" />
             </div>
-            <nav class="flex-1 space-y-1 overflow-y-auto p-3">
-              <div v-for="item in links[0]" :key="item.label">
+            <nav class="flex-1 space-y-1.5 overflow-y-auto px-3 py-4">
+              <p class="mb-3 px-3 font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-dimmed">Navegación</p>
+              <div v-for="item in links[0]" :key="item.label" class="relative">
                 <button
                   v-if="item.children?.length"
                   type="button"
-                  class="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left font-medium"
-                  :class="item.active || expandedMenus.has(item.label) ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-elevated hover:text-highlighted'"
+                  class="group relative flex min-h-12 w-full items-center gap-3 overflow-hidden rounded-xl border border-transparent px-2.5 py-2 text-left text-sm font-semibold transition-all duration-200"
+                  :class="item.active || expandedMenus.has(item.label) ? 'border-primary/20 bg-gradient-to-r from-primary/18 to-primary/5 text-primary shadow-sm' : 'text-muted hover:border-default hover:bg-elevated hover:text-highlighted'"
                   @click="toggleMenu(item)"
                 >
-                  <i :class="[item.icon, 'size-5 shrink-0']" aria-hidden="true" />
+                  <span v-if="item.active || expandedMenus.has(item.label)" class="absolute inset-y-2 left-0 w-0.5 rounded-full bg-primary"/>
+                  <span class="grid size-9 shrink-0 place-items-center rounded-lg border" :class="item.active || expandedMenus.has(item.label) ? 'border-primary/15 bg-primary/12' : 'border-transparent bg-elevated'"><UIcon :name="item.icon" class="size-5" aria-hidden="true" /></span>
                   <span class="flex-1">{{ item.label }}</span>
-                  <i :class="[expandedMenus.has(item.label) ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right', 'size-4']" />
+                  <span class="grid size-8 place-items-center rounded-md bg-default/45"><UIcon name="i-lucide-chevron-right" class="size-4 transition-transform duration-300" :class="expandedMenus.has(item.label)?'rotate-90':''"/></span>
                 </button>
                 <Link
                   v-else
                   :href="item.url"
-                  class="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left font-medium"
-                  :class="item.active ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-elevated hover:text-highlighted'"
+                  class="group relative flex min-h-12 w-full items-center gap-3 overflow-hidden rounded-xl border border-transparent px-2.5 py-2 text-left text-sm font-semibold transition-all duration-200"
+                  :class="item.active ? 'border-primary/20 bg-gradient-to-r from-primary/18 to-primary/5 text-primary shadow-sm' : 'text-muted hover:border-default hover:bg-elevated hover:text-highlighted'"
                   @click="open = false"
                 >
-                  <i :class="[item.icon, 'size-5 shrink-0']" aria-hidden="true" />
-                  <span>{{ item.label }}</span>
+                  <span v-if="item.active" class="absolute inset-y-2 left-0 w-0.5 rounded-full bg-primary"/>
+                  <span class="grid size-9 shrink-0 place-items-center rounded-lg border" :class="item.active ? 'border-primary/15 bg-primary/12' : 'border-transparent bg-elevated'"><UIcon :name="item.icon" class="size-5" aria-hidden="true" /></span>
+                  <span class="flex-1">{{ item.label }}</span>
                 </Link>
-                <div v-if="item.children?.length && expandedMenus.has(item.label)" class="ml-5 mt-1 space-y-1 border-l border-default pl-3">
-                  <Link v-for="child in item.children" :key="child.url" :href="child.url" class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-muted hover:bg-elevated hover:text-highlighted" :class="page.url.startsWith(child.url)?'bg-primary/10 text-primary':''" @click="open=false"><i class="i-lucide-corner-down-right -ml-4 size-3.5 shrink-0 text-dimmed" aria-hidden="true"/><span>{{ child.label }}</span></Link>
-                </div>
+                <Transition name="submenu">
+                  <div v-if="item.children?.length && expandedMenus.has(item.label)" class="submenu-tree relative ml-5 mt-1.5 space-y-1 pb-1 pl-7">
+                    <Link v-for="child in item.children" :key="child.url" :href="child.url" class="submenu-link group/child relative flex min-h-10 w-full items-center rounded-lg border border-transparent px-3 py-2 text-left text-sm font-medium transition-all duration-200" :class="page.url.startsWith(child.url)?'border-primary/15 bg-primary/10 text-primary shadow-sm':'text-muted hover:border-default hover:bg-elevated hover:text-highlighted'" @click="open=false"><span class="tree-branch" :class="page.url.startsWith(child.url)?'tree-branch-active':''" aria-hidden="true"/><span class="mr-2 grid size-7 shrink-0 place-items-center rounded-md border" :class="page.url.startsWith(child.url)?'border-primary/20 bg-primary/15 text-primary':'border-default bg-elevated text-dimmed'"><UIcon :name="child.icon" class="size-4" aria-hidden="true"/></span><span>{{ child.label }}</span></Link>
+                  </div>
+                </Transition>
               </div>
             </nav>
             <div class="border-t border-default p-3"><UserMenu /></div>
@@ -276,7 +295,7 @@ const groups = computed(() => [{
             class="h-auto w-[min(82vw,56rem)] opacity-[0.045] dark:opacity-[0.065]"
           />
         </div>
-        <div class="relative z-[2] flex min-w-0 flex-1">
+        <div class="app-content relative z-[2] flex min-w-0 flex-1">
           <slot />
         </div>
       </div>
@@ -284,3 +303,82 @@ const groups = computed(() => [{
     </UDashboardGroup>
   </UApp>
 </template>
+
+<style scoped>
+.sidebar-shell {
+  background-image: radial-gradient(circle at 15% 0%, color-mix(in srgb, var(--ui-primary) 7%, transparent), transparent 18rem);
+}
+
+.submenu-tree::before {
+  position: absolute;
+  top: 0;
+  bottom: 1.15rem;
+  left: .7rem;
+  width: 1px;
+  content: '';
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--ui-primary) 55%, var(--ui-border)), var(--ui-border));
+}
+
+.tree-branch {
+  position: absolute;
+  top: 50%;
+  left: -1.05rem;
+  width: 1.05rem;
+  height: .75rem;
+  border-top: 1px solid var(--ui-border);
+  border-left: 1px solid transparent;
+  border-radius: 0 .4rem 0 0;
+  transition: border-color 200ms ease, filter 200ms ease;
+}
+
+.tree-branch::after {
+  position: absolute;
+  top: -3px;
+  right: -1px;
+  width: 5px;
+  height: 5px;
+  content: '';
+  border-top: 1px solid currentColor;
+  border-right: 1px solid currentColor;
+  color: var(--ui-text-dimmed);
+  transform: rotate(45deg);
+}
+
+.submenu-link:hover .tree-branch,
+.tree-branch-active {
+  border-top-color: var(--ui-primary);
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--ui-primary) 60%, transparent));
+}
+
+.tree-branch-active::after,
+.submenu-link:hover .tree-branch::after {
+  color: var(--ui-primary);
+}
+
+.submenu-enter-active,
+.submenu-leave-active {
+  overflow: hidden;
+  transition: max-height 320ms cubic-bezier(.22, 1, .36, 1), opacity 220ms ease, transform 280ms ease;
+}
+
+.submenu-enter-from,
+.submenu-leave-to {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-.4rem);
+}
+
+.submenu-enter-to,
+.submenu-leave-from {
+  max-height: 36rem;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .submenu-enter-active,
+  .submenu-leave-active {
+    transition-duration: 1ms;
+  }
+}
+</style>

@@ -56,7 +56,7 @@ const handleSubmit = () => {
         <template #header>
           <div class="flex items-center gap-3 mb-2">
             <div class="flex items-center justify-center w-12 h-12 rounded-full bg-primary-100 dark:bg-primary-900">
-              <i class="i-lucide-user-plus text-primary-600 dark:text-primary-400 text-xl"></i>
+              <UIcon name="i-lucide-user-plus" class="size-5 text-primary-600 dark:text-primary-400" />
             </div>
             <div>
               <h2 class="text-2xl font-bold">Crear Cuenta</h2>

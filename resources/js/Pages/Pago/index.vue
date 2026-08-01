@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import { Head, Link, router } from "@inertiajs/vue3";
+import { computed, reactive, ref } from "vue";
+import { Head, Link, router, usePage } from "@inertiajs/vue3";
 import { route } from "ziggy-js";
 import { usePermissions } from "../../composables/usePermissions";
 interface Pago {
@@ -27,9 +27,49 @@ interface Pagina<T> {
     links: { url: string | null; label: string; active: boolean }[];
     total: number;
 }
-const props = defineProps<{ pagos: Pagina<Pago>; buscar: string }>();
+interface OrdenPendiente {
+    id: string;
+    numero: string;
+    cliente: string;
+    vehiculo: string;
+    total: string;
+    pagado: string;
+    saldo: string;
+}
+const props = defineProps<{
+    pagos: Pagina<Pago>;
+    buscar: string;
+    ordenesPendientes: OrdenPendiente[];
+}>();
 const { can } = usePermissions();
 const busqueda = ref(props.buscar);
+const formularioAbierto = ref(false);
+const procesando = ref(false);
+const fechaLocal = () => {
+    const fecha = new Date();
+    fecha.setMinutes(fecha.getMinutes() - fecha.getTimezoneOffset());
+    return fecha.toISOString().slice(0, 16);
+};
+const manual = reactive({
+    ordenId: "",
+    monto: "",
+    metodo: "efectivo",
+    referencia: "",
+    observaciones: "",
+    pagadoEn: fechaLocal(),
+});
+const ordenSeleccionada = computed(() =>
+    props.ordenesPendientes.find((orden) => orden.id === manual.ordenId),
+);
+const errors = computed<Record<string, string>>(
+    () => usePage().props.errors as Record<string, string>,
+);
+const opcionesOrden = computed(() =>
+    props.ordenesPendientes.map((orden) => ({
+        label: `${orden.numero} · ${orden.vehiculo} · saldo $ ${dinero(orden.saldo)}`,
+        value: orden.id,
+    })),
+);
 function buscar() {
     router.get(
         route("pagos.index"),
@@ -61,13 +101,41 @@ function dinero(valor: string) {
         maximumFractionDigits: 2,
     });
 }
+function registrarManual() {
+    if (!manual.ordenId) return;
+    procesando.value = true;
+    router.post(
+        route("pagos.store", manual.ordenId),
+        {
+            monto: manual.monto,
+            metodo: manual.metodo,
+            referencia: manual.referencia || undefined,
+            observaciones: manual.observaciones || undefined,
+            pagadoEn: manual.pagadoEn,
+            ver_comprobante: true,
+        },
+        { onFinish: () => (procesando.value = false) },
+    );
+}
+function usarSaldoCompleto() {
+    if (ordenSeleccionada.value) manual.monto = ordenSeleccionada.value.saldo;
+}
 </script>
 <template>
     <Head title="Pagos" /><UDashboardPanel
         ><template #header
             ><UDashboardNavbar title="Pagos y comprobantes"
                 ><template #leading
-                    ><UDashboardSidebarCollapse /></template></UDashboardNavbar></template
+                    ><UDashboardSidebarCollapse /></template
+                ><template #right
+                    ><UButton
+                        v-if="can('pagos.registrar')"
+                        :label="formularioAbierto ? 'Cerrar registro' : 'Registrar pago manual'"
+                        :icon="formularioAbierto ? 'i-lucide-x' : 'i-lucide-receipt-text'"
+                        :color="formularioAbierto ? 'neutral' : 'primary'"
+                        :variant="formularioAbierto ? 'outline' : 'solid'"
+                        @click="formularioAbierto = !formularioAbierto"
+                    /></template></UDashboardNavbar></template
         ><template #body
             ><div class="space-y-6">
                 <div
@@ -90,6 +158,39 @@ function dinero(valor: string) {
                         /><UButton type="submit" label="Buscar" />
                     </form>
                 </div>
+                <UCard v-if="formularioAbierto" class="border-primary/20 bg-primary/[0.025]">
+                    <template #header>
+                        <div class="flex items-start gap-3">
+                            <span class="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><UIcon name="i-lucide-hand-coins" class="size-5"/></span>
+                            <div><p class="font-mono text-xs font-bold uppercase tracking-[0.16em] text-primary">Registro de caja</p><h2 class="mt-1 text-xl font-bold">Nuevo pago y comprobante</h2><p class="mt-1 text-sm text-muted">Selecciona una orden con saldo. El sistema generará automáticamente un comprobante inmutable.</p></div>
+                        </div>
+                    </template>
+                    <form class="space-y-5" @submit.prevent="registrarManual">
+                        <UFormField label="Orden de trabajo" required :error="errors.orden">
+                            <USelect v-model="manual.ordenId" :items="opcionesOrden" class="w-full" placeholder="Selecciona una orden con saldo pendiente"/>
+                        </UFormField>
+
+                        <div v-if="ordenSeleccionada" class="grid gap-3 rounded-xl border border-primary/15 bg-primary/5 p-4 sm:grid-cols-2 xl:grid-cols-4">
+                            <div><p class="text-xs font-bold uppercase tracking-wide text-muted">Orden</p><p class="mt-1 font-mono font-bold text-primary">{{ordenSeleccionada.numero}}</p></div>
+                            <div><p class="text-xs font-bold uppercase tracking-wide text-muted">Cliente y vehículo</p><p class="mt-1 font-medium">{{ordenSeleccionada.cliente}}</p><p class="text-xs text-muted">{{ordenSeleccionada.vehiculo}}</p></div>
+                            <div><p class="text-xs font-bold uppercase tracking-wide text-muted">Total / pagado</p><p class="mt-1 font-medium">$ {{dinero(ordenSeleccionada.total)}}</p><p class="text-xs text-muted">Pagado $ {{dinero(ordenSeleccionada.pagado)}}</p></div>
+                            <div><p class="text-xs font-bold uppercase tracking-wide text-muted">Saldo pendiente</p><p class="mt-1 text-xl font-black text-primary">$ {{dinero(ordenSeleccionada.saldo)}}</p></div>
+                        </div>
+
+                        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                            <UFormField label="Monto" required :error="errors.monto">
+                                <div class="flex gap-2"><UInput v-model="manual.monto" type="number" min="0.01" :max="ordenSeleccionada?.saldo" step="0.01" class="w-full" placeholder="0.00"/><UButton type="button" label="Saldo total" color="neutral" variant="outline" :disabled="!ordenSeleccionada" @click="usarSaldoCompleto"/></div>
+                            </UFormField>
+                            <UFormField label="Método de pago" required :error="errors.metodo"><USelect v-model="manual.metodo" :items="[{label:'Efectivo',value:'efectivo'},{label:'Tarjeta',value:'tarjeta'},{label:'Transferencia',value:'transferencia'},{label:'Otro',value:'otro'}]" class="w-full"/></UFormField>
+                            <UFormField label="Fecha y hora" required :error="errors.pagado_en"><UInput v-model="manual.pagadoEn" type="datetime-local" :max="fechaLocal()" class="w-full"/></UFormField>
+                            <UFormField label="Referencia" :error="errors.referencia"><UInput v-model="manual.referencia" class="w-full" placeholder="Transacción, recibo externo..."/></UFormField>
+                        </div>
+                        <UFormField label="Observaciones" :error="errors.observaciones"><UTextarea v-model="manual.observaciones" class="w-full" :rows="3" placeholder="Información adicional del pago"/></UFormField>
+                        <UAlert color="primary" variant="subtle" icon="i-lucide-shield-check" title="Comprobante automático" description="Al registrar el pago se congelarán conceptos, valores, saldo y datos financieros para conservar su evidencia histórica."/>
+                        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><UButton type="button" label="Cancelar" color="neutral" variant="outline" @click="formularioAbierto=false"/><UButton type="submit" label="Registrar y ver comprobante" icon="i-lucide-file-check-2" :loading="procesando" :disabled="!manual.ordenId"/></div>
+                    </form>
+                    <div v-if="!ordenesPendientes.length" class="mt-5 rounded-xl border border-dashed border-default p-8 text-center"><UIcon name="i-lucide-circle-check-big" class="mx-auto size-8 text-success"/><p class="mt-2 font-semibold">No hay saldos pendientes</p><p class="text-sm text-muted">Todas las órdenes visibles están pagadas o todavía no tienen conceptos cobrables.</p></div>
+                </UCard>
                 <div class="overflow-hidden rounded-lg border border-default">
                     <ul v-if="pagos.data.length" class="divide-y divide-default">
                         <li v-for="p in pagos.data" :key="p.id" class="p-4 sm:p-5">

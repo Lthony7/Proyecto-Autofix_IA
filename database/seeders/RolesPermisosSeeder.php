@@ -24,7 +24,8 @@ class RolesPermisosSeeder extends Seeder
             'ordenes.ver', 'ordenes.crear', 'ordenes.asignar', 'ordenes.avanzar', 'ordenes.cancelar',
             'diagnosticos.registrar', 'ia.solicitar', 'ia.revisar',
             'inventario.ver', 'inventario.gestionar', 'inventario.consumir',
-            'pagos.ver', 'pagos.registrar', 'pagos.anular', 'pagos.reembolsar', 'historial.ver', 'historial.finanzas.ver',
+            'pagos.ver', 'pagos.registrar', 'pagos.anular', 'pagos.reembolsar',
+            'historial.ver', 'historial.servicios.ver', 'historial.acciones.ver', 'historial.tecnico.registrar', 'historial.finanzas.ver',
             'facturas.ver', 'facturas.crear', 'facturas.editar',
             'descuentos.autorizar',
             'reportes.ver', 'reportes.financieros', 'reportes.exportar',
@@ -42,19 +43,19 @@ class RolesPermisosSeeder extends Seeder
             'Recepcionista' => [
                 'clientes.ver', 'clientes.crear', 'clientes.editar', 'clientes.desactivar',
                 'vehiculos.ver', 'vehiculos.crear', 'vehiculos.editar',
-                'mecanicos.ver', 'servicios.gestionar',
                 'citas.ver', 'citas.crear', 'citas.gestionar', 'citas.cancelar',
                 'ordenes.ver', 'ordenes.crear', 'ordenes.asignar', 'ordenes.avanzar', 'ordenes.cancelar',
-                'ia.solicitar', 'inventario.ver', 'pagos.ver', 'pagos.registrar', 'historial.ver', 'historial.finanzas.ver',
+                'ia.solicitar', 'inventario.ver', 'pagos.ver', 'pagos.registrar',
+                'historial.ver', 'historial.servicios.ver', 'historial.acciones.ver', 'historial.finanzas.ver',
                 'facturas.ver', 'facturas.crear', 'facturas.editar',
                 'reportes.ver', 'reportes.financieros', 'reportes.exportar',
             ],
             'Mecánico' => [
-                'vehiculos.ver', 'citas.ver', 'ordenes.ver', 'ordenes.avanzar',
+                'ordenes.ver', 'ordenes.avanzar',
                 'diagnosticos.registrar', 'ia.solicitar', 'ia.revisar',
-                'inventario.ver', 'inventario.consumir', 'historial.ver',
+                'inventario.ver', 'inventario.consumir', 'historial.ver', 'historial.servicios.ver', 'historial.tecnico.registrar',
             ],
-            'Cliente' => ['vehiculos.ver', 'citas.ver', 'citas.crear', 'ordenes.ver', 'historial.ver', 'historial.finanzas.ver'],
+            'Cliente' => ['vehiculos.ver', 'citas.ver', 'citas.crear', 'ordenes.ver', 'historial.ver', 'historial.servicios.ver', 'historial.finanzas.ver'],
         ];
 
         foreach ($matriz as $nombre => $permisosRol) {

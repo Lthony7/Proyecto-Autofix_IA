@@ -9,6 +9,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Src\Auditoria\Application\Services\RegistrarAuditoria;
 use Src\Cliente\Infrastructure\Models\ClienteEloquentModel;
+use Src\HistorialVehicular\Application\Services\RegistrarEventoVehiculo;
 use Src\Vehiculo\Infrastructure\Models\VehiculoEloquentModel;
 use Src\Vehiculo\Infrastructure\Requests\CambiarEstadoVehiculoRequest;
 use Src\Vehiculo\Infrastructure\Requests\GuardarVehiculoRequest;
@@ -49,7 +50,7 @@ class VehiculoWebController extends Controller
         ]);
     }
 
-    public function store(GuardarVehiculoRequest $request, RegistrarAuditoria $auditoria): RedirectResponse
+    public function store(GuardarVehiculoRequest $request, RegistrarAuditoria $auditoria, RegistrarEventoVehiculo $historial): RedirectResponse
     {
         $vehiculo = VehiculoEloquentModel::create([
             ...$request->validated(),
@@ -58,6 +59,9 @@ class VehiculoWebController extends Controller
             'actualizado_por' => $request->user()->id,
         ]);
         $auditoria->registrar('vehiculo.creado', 'vehiculo', $vehiculo->id, [], $request);
+        $historial->registrar($vehiculo->id, 'vehiculo.creado', 'Vehículo registrado en el sistema.', [
+            'despues' => $vehiculo->only(['cliente_id', 'placa', 'marca', 'modelo', 'anio', 'color', 'kilometraje', 'combustible', 'estado']),
+        ], $request);
 
         return redirect()->route('vehiculos.index')->with('success', 'Vehículo registrado exitosamente.');
     }
@@ -74,10 +78,22 @@ class VehiculoWebController extends Controller
         GuardarVehiculoRequest $request,
         VehiculoEloquentModel $vehiculo,
         RegistrarAuditoria $auditoria,
+        RegistrarEventoVehiculo $historial,
     ): RedirectResponse {
-        $anteriores = $vehiculo->only(['cliente_id', 'placa', 'marca', 'modelo', 'anio', 'kilometraje']);
+        $campos = ['cliente_id', 'placa', 'marca', 'modelo', 'anio', 'color', 'kilometraje', 'combustible', 'observaciones'];
+        $anteriores = $vehiculo->only($campos);
         $vehiculo->update([...$request->validated(), 'actualizado_por' => $request->user()->id]);
-        $auditoria->registrar('vehiculo.actualizado', 'vehiculo', $vehiculo->id, ['antes' => $anteriores], $request);
+        $posteriores = $vehiculo->only($campos);
+        $cambios = collect($posteriores)->filter(fn ($valor, $campo) => $anteriores[$campo] !== $valor)
+            ->mapWithKeys(fn ($valor, $campo) => [$campo => ['antes' => $anteriores[$campo], 'despues' => $valor]])->all();
+        $auditoria->registrar('vehiculo.actualizado', 'vehiculo', $vehiculo->id, ['cambios' => $cambios], $request);
+        if (array_key_exists('cliente_id', $cambios)) {
+            $historial->registrar($vehiculo->id, 'vehiculo.propietario_cambiado', 'Se cambió el propietario asociado al vehículo.', $cambios, $request);
+            unset($cambios['cliente_id']);
+        }
+        if ($cambios) {
+            $historial->registrar($vehiculo->id, 'vehiculo.actualizado', 'Se actualizó la información del vehículo.', $cambios, $request);
+        }
 
         return redirect()->route('vehiculos.index')->with('success', 'Vehículo actualizado exitosamente.');
     }
@@ -86,12 +102,16 @@ class VehiculoWebController extends Controller
         CambiarEstadoVehiculoRequest $request,
         VehiculoEloquentModel $vehiculo,
         RegistrarAuditoria $auditoria,
+        RegistrarEventoVehiculo $historial,
     ): RedirectResponse {
         $anterior = $vehiculo->estado;
         $vehiculo->update(['estado' => $request->validated('estado'), 'actualizado_por' => $request->user()->id]);
         $auditoria->registrar('vehiculo.estado_cambiado', 'vehiculo', $vehiculo->id, [
             'estado_anterior' => $anterior,
             'estado_nuevo' => $vehiculo->estado,
+        ], $request);
+        $historial->registrar($vehiculo->id, 'vehiculo.estado_cambiado', "El estado cambió de {$anterior} a {$vehiculo->estado}.", [
+            'estado' => ['antes' => $anterior, 'despues' => $vehiculo->estado],
         ], $request);
 
         return back()->with('success', 'Estado del vehículo actualizado.');

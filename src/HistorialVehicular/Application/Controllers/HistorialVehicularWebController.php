@@ -9,14 +9,32 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Src\Auth\Infrastructure\Models\UserEloquentModel;
+use Src\HistorialVehicular\Infrastructure\Models\HistorialVehiculoAccionEloquentModel;
 use Src\OrdenTrabajo\Infrastructure\Models\OrdenTrabajoEloquentModel;
 use Src\Taller\Infrastructure\Models\ServicioEloquentModel;
 use Src\Vehiculo\Infrastructure\Models\VehiculoEloquentModel;
 
 class HistorialVehicularWebController extends Controller
 {
+    private const ACCIONES = [
+        'vehiculo.creado' => 'Creación de vehículo',
+        'vehiculo.actualizado' => 'Edición de información',
+        'vehiculo.propietario_cambiado' => 'Cambio de propietario',
+        'vehiculo.estado_cambiado' => 'Cambio de estado',
+        'orden.mecanicos_asignados' => 'Asignación de mecánico',
+        'orden.creada' => 'Creación de orden',
+        'servicio.finalizado' => 'Finalización de servicio',
+        'diagnostico.registrado' => 'Diagnóstico técnico',
+        'vehiculo.eliminado' => 'Eliminación de vehículo',
+    ];
+
     public function index(Request $request): Response
     {
+        $modoCliente = $request->route('modo') === 'cliente';
+        if ($modoCliente) {
+            abort_unless($request->user()->hasRole('Cliente'), 403);
+        }
         $buscar = trim((string) $request->input('buscar'));
         $usuario = $request->user();
         $vehiculos = VehiculoEloquentModel::query()
@@ -52,12 +70,17 @@ class HistorialVehicularWebController extends Controller
         return Inertia::render('HistorialVehicular/index', [
             'vehiculos' => $vehiculos,
             'buscar' => $buscar,
+            'modoCliente' => $modoCliente,
         ]);
     }
 
     public function show(Request $request, VehiculoEloquentModel $vehiculo): Response
     {
         $usuario = $request->user();
+        $modoCliente = $request->route('modo') === 'cliente';
+        if ($modoCliente) {
+            abort_unless($usuario->hasRole('Cliente'), 403);
+        }
         abort_unless(VehiculoEloquentModel::whereKey($vehiculo->id)->visiblePara($usuario)->exists(), 403);
         if ($usuario->hasRole('Mecánico')) {
             abort_unless(OrdenTrabajoEloquentModel::where('vehiculo_id', $vehiculo->id)->visiblePara($usuario)->exists(), 403);
@@ -68,7 +91,10 @@ class HistorialVehicularWebController extends Controller
             'hasta' => ['nullable', 'date', 'after_or_equal:desde'],
             'estado' => ['nullable', Rule::in(['pendiente', 'en_diagnostico', 'en_reparacion', 'finalizada', 'entregada', 'cancelada'])],
             'servicio' => ['nullable', 'uuid'],
+            'buscar' => ['nullable', 'string', 'max:120'],
+            'orden' => ['nullable', Rule::in(['reciente', 'antiguo'])],
         ]);
+        $buscar = trim((string) ($filtros['buscar'] ?? ''));
 
         $ordenes = OrdenTrabajoEloquentModel::query()
             ->where('vehiculo_id', $vehiculo->id)
@@ -83,7 +109,13 @@ class HistorialVehicularWebController extends Controller
             ->when($filtros['hasta'] ?? null, fn (Builder $query, string $hasta) => $query->whereDate('recibida_en', '<=', $hasta))
             ->when($filtros['estado'] ?? null, fn (Builder $query, string $estado) => $query->where('estado', $estado))
             ->when($filtros['servicio'] ?? null, fn (Builder $query, string $servicio) => $query->whereHas('servicios', fn (Builder $linea) => $linea->where('servicio_id', $servicio)))
-            ->latest('recibida_en')
+            ->when($buscar, fn (Builder $query) => $query->where(function (Builder $sub) use ($buscar) {
+                $sub->where('numero', 'ilike', "%{$buscar}%")
+                    ->orWhere('falla_reportada', 'ilike', "%{$buscar}%")
+                    ->orWhereHas('servicios', fn (Builder $servicio) => $servicio->where('nombre_servicio', 'ilike', "%{$buscar}%")->orWhere('observaciones', 'ilike', "%{$buscar}%"))
+                    ->orWhereHas('diagnosticos', fn (Builder $diagnostico) => $diagnostico->where('diagnostico', 'ilike', "%{$buscar}%"));
+            }))
+            ->orderBy('recibida_en', ($filtros['orden'] ?? 'reciente') === 'antiguo' ? 'asc' : 'desc')
             ->paginate(10)
             ->withQueryString();
 
@@ -164,6 +196,11 @@ class HistorialVehicularWebController extends Controller
                     'pagado' => number_format($pagado, 2, '.', ''),
                     'saldo' => number_format($saldo, 2, '.', ''),
                     'estado' => $estadoPago,
+                    'factura' => $facturaVigente ? [
+                        'id' => $facturaVigente->id,
+                        'numero' => $facturaVigente->numero,
+                        'estado' => $facturaVigente->estado,
+                    ] : null,
                     'pagos' => $pagosOrden->map(fn ($pago) => [
                         'numero' => $pago->numero,
                         'comprobante' => $pago->comprobante_numero,
@@ -195,6 +232,56 @@ class HistorialVehicularWebController extends Controller
             'filtros' => $filtros,
             'servicios' => ServicioEloquentModel::where('estado', 'activo')->orderBy('nombre')->get(['id', 'nombre']),
             'puedeVerFinanzas' => $puedeVerFinanzas,
+            'modoCliente' => $modoCliente,
+        ]);
+    }
+
+    public function bitacora(Request $request): Response
+    {
+        $filtros = $request->validate([
+            'buscar' => ['nullable', 'string', 'max:120'],
+            'vehiculo' => ['nullable', 'uuid', 'exists:vehiculos,id'],
+            'usuario' => ['nullable', 'uuid', 'exists:users,id'],
+            'desde' => ['nullable', 'date'],
+            'hasta' => ['nullable', 'date', 'after_or_equal:desde'],
+            'accion' => ['nullable', Rule::in(array_keys(self::ACCIONES))],
+        ]);
+        $buscar = trim((string) ($filtros['buscar'] ?? ''));
+        $registros = HistorialVehiculoAccionEloquentModel::query()
+            ->with(['vehiculo:id,placa,marca,modelo', 'usuario:id,name,email'])
+            ->when($buscar, fn (Builder $query) => $query->where(function (Builder $sub) use ($buscar) {
+                $sub->where('descripcion', 'ilike', "%{$buscar}%")
+                    ->orWhereHas('vehiculo', fn (Builder $vehiculo) => $vehiculo->where('placa', 'ilike', "%{$buscar}%"))
+                    ->orWhereHas('usuario', fn (Builder $usuario) => $usuario->where('name', 'ilike', "%{$buscar}%"));
+            }))
+            ->when($filtros['vehiculo'] ?? null, fn (Builder $query, string $id) => $query->where('vehiculo_id', $id))
+            ->when($filtros['usuario'] ?? null, fn (Builder $query, string $id) => $query->where('usuario_id', $id))
+            ->when($filtros['desde'] ?? null, fn (Builder $query, string $fecha) => $query->whereDate('created_at', '>=', $fecha))
+            ->when($filtros['hasta'] ?? null, fn (Builder $query, string $fecha) => $query->whereDate('created_at', '<=', $fecha))
+            ->when($filtros['accion'] ?? null, fn (Builder $query, string $accion) => $query->where('accion', $accion))
+            ->latest('created_at')
+            ->paginate(20)
+            ->withQueryString();
+
+        $registros->through(fn (HistorialVehiculoAccionEloquentModel $registro) => [
+            'id' => $registro->id,
+            'fecha' => $registro->created_at,
+            'accion' => $registro->accion,
+            'accionLabel' => self::ACCIONES[$registro->accion] ?? $registro->accion,
+            'descripcion' => $registro->descripcion,
+            'cambios' => $registro->cambios,
+            'ip' => $registro->ip,
+            'rol' => $registro->rol ?: 'Sin rol',
+            'usuario' => $registro->usuario ? ['nombre' => $registro->usuario->name, 'email' => $registro->usuario->email] : null,
+            'vehiculo' => ['id' => $registro->vehiculo->id, 'placa' => $registro->vehiculo->placa, 'descripcion' => trim("{$registro->vehiculo->marca} {$registro->vehiculo->modelo}")],
+        ]);
+
+        return Inertia::render('HistorialVehicular/bitacora', [
+            'registros' => $registros,
+            'vehiculos' => VehiculoEloquentModel::orderBy('placa')->get(['id', 'placa', 'marca', 'modelo'])->map(fn ($vehiculo) => ['value' => $vehiculo->id, 'label' => "{$vehiculo->placa} · {$vehiculo->marca} {$vehiculo->modelo}"]),
+            'usuarios' => UserEloquentModel::orderBy('name')->get(['id', 'name', 'email'])->map(fn ($usuario) => ['value' => $usuario->id, 'label' => "{$usuario->name} · {$usuario->email}"]),
+            'acciones' => collect(self::ACCIONES)->map(fn ($label, $value) => compact('label', 'value'))->values(),
+            'filtros' => [...$filtros, 'buscar' => $buscar],
         ]);
     }
 }
