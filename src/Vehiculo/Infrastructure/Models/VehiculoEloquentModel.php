@@ -37,6 +37,11 @@ class VehiculoEloquentModel extends Model
         return $this->hasMany(OrdenTrabajoEloquentModel::class, 'vehiculo_id');
     }
 
+    public function citas(): HasMany
+    {
+        return $this->hasMany(\Src\Cita\Infrastructure\Models\CitaEloquentModel::class, 'vehiculo_id');
+    }
+
     public function scopeVisiblePara(Builder $query, UserEloquentModel $usuario): Builder
     {
         if ($usuario->hasRole('Cliente')) {

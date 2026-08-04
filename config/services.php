@@ -8,6 +8,7 @@ return [
         'url' => env('GROQ_API_URL', 'https://api.groq.com/openai/v1'),
         'model' => env('GROQ_MODEL'),
         'timeout' => (int) env('GROQ_TIMEOUT', 15),
+        'max_tokens' => (int) env('GROQ_MAX_TOKENS', 2600),
     ],
 
     /*

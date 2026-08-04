@@ -105,20 +105,23 @@ class ReporteWebController extends Controller
             $filtros
         );
 
+        $totalOrdenes = $ordenBase()->count();
+        $ordenesPorEstado = $ordenBase()->groupBy('o.estado')->orderBy('o.estado')->get(['o.estado', DB::raw('COUNT(*) as total')]);
+
         $consultaPendientes = $ordenBase()->whereIn('o.estado', ['pendiente', 'en_diagnostico', 'en_reparacion']);
         $totalPendientes = (clone $consultaPendientes)->count();
         $consultaPendientes->orderBy('o.recibida_en');
         if (! $sinLimites || $soloSinLimite !== 'ordenes_pendientes') {
             $consultaPendientes->limit(50);
         }
-        $pendientes = $consultaPendientes->get(['o.numero', 'o.estado', 'o.recibida_en', 'c.razon_social as cliente', 'v.placa']);
+        $pendientes = $consultaPendientes->get(['o.id', 'o.numero', 'o.estado', 'o.recibida_en', 'c.razon_social as cliente', 'v.placa']);
         $consultaFinalizadas = $ordenBase()->whereIn('o.estado', ['finalizada', 'entregada']);
         $totalFinalizadas = (clone $consultaFinalizadas)->count();
         $consultaFinalizadas->orderByDesc('o.finalizada_en');
         if (! $sinLimites || $soloSinLimite !== 'ordenes_finalizadas') {
             $consultaFinalizadas->limit(50);
         }
-        $finalizadas = $consultaFinalizadas->get(['o.numero', 'o.estado', 'o.finalizada_en', 'o.entregada_en', 'c.razon_social as cliente', 'v.placa']);
+        $finalizadas = $consultaFinalizadas->get(['o.id', 'o.numero', 'o.estado', 'o.finalizada_en', 'o.entregada_en', 'c.razon_social as cliente', 'v.placa']);
 
         $servicios = DB::table('orden_servicios as os')
             ->join('ordenes_trabajo as o', 'o.id', '=', 'os.orden_id')
@@ -165,8 +168,18 @@ class ReporteWebController extends Controller
                 ->get([DB::raw('DATE(p.pagado_en) as fecha'), DB::raw('SUM(p.monto) as total'), DB::raw('COUNT(*) as pagos')]);
         }
 
+        $inventarioActivo = DB::table('repuestos')->where('estado', 'activo');
+        $stockOk = (clone $inventarioActivo)->whereColumn('stock_actual', '>', 'stock_minimo')->count();
+        $stockBajoTotal = (clone $inventarioActivo)->where('stock_actual', '>', 0)->whereColumn('stock_actual', '<=', 'stock_minimo')->count();
+        $agotados = (clone $inventarioActivo)->where('stock_actual', '<=', 0)->count();
+        $stockBajo = DB::table('repuestos as r')->join('categorias_repuesto as cr', 'cr.id', '=', 'r.categoria_id')
+            ->where('r.estado', 'activo')->whereColumn('r.stock_actual', '<=', 'r.stock_minimo')->orderBy('r.stock_actual')->limit(20)
+            ->get(['r.id', 'r.codigo', 'r.nombre', 'r.unidad', 'r.stock_actual', 'r.stock_minimo', 'cr.nombre as categoria']);
+        $iaPorEstado = DB::table('consultas_ia')->whereBetween('created_at', [$desde, $hasta])->groupBy('estado')->orderBy('estado')->get(['estado', DB::raw('COUNT(*) as total')]);
+
         return [
             'resumen' => [
+                'totalOrdenes' => $totalOrdenes,
                 'pendientes' => $totalPendientes,
                 'finalizadas' => $totalFinalizadas,
                 'ingresos' => $totalIngresos === null ? null : number_format((float) $totalIngresos, 2, '.', ''),
@@ -179,6 +192,9 @@ class ReporteWebController extends Controller
             'serviciosSolicitados' => $servicios,
             'repuestosUtilizados' => $repuestos,
             'vehiculosPorCliente' => $vehiculosCliente,
+            'ordenesPorEstado' => $ordenesPorEstado,
+            'iaPorEstado' => $iaPorEstado,
+            'inventario' => ['activos' => (clone $inventarioActivo)->count(), 'ok' => $stockOk, 'bajos' => $stockBajoTotal, 'agotados' => $agotados, 'stockBajo' => $stockBajo],
         ];
     }
 
@@ -201,7 +217,7 @@ class ReporteWebController extends Controller
     {
         return [
             'clientes' => DB::table('clientes')->where('estado', 'activo')->orderBy('razon_social')->get(['id', 'razon_social as nombre']),
-            'vehiculos' => DB::table('vehiculos')->where('estado', '<>', 'archivado')->orderBy('placa')->get(['id', 'placa as nombre']),
+            'vehiculos' => DB::table('vehiculos')->where('estado', '<>', 'archivado')->orderBy('placa')->get(['id', 'cliente_id', 'placa as nombre']),
             'mecanicos' => DB::table('mecanicos')->where('estado', 'activo')->orderBy('nombres')->get(['id', DB::raw("CONCAT(nombres, ' ', apellidos) as nombre")]),
             'servicios' => DB::table('servicios_taller')->where('estado', 'activo')->orderBy('nombre')->get(['id', 'nombre']),
         ];

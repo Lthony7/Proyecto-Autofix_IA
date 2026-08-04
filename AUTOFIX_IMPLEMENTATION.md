@@ -57,7 +57,7 @@ npm run build
 
 ## Groq
 
-La integración se configurará mediante `GROQ_ENABLED`, `GROQ_API_KEY`, `GROQ_API_URL`, `GROQ_MODEL` y `GROQ_TIMEOUT`. La clave nunca se comparte con Inertia ni se consume desde Vue. Mientras la integración no esté habilitada se usará el modo simulado definido en el contexto `AsistenteIA`.
+La integración se configura mediante `GROQ_ENABLED`, `GROQ_API_KEY`, `GROQ_API_URL`, `GROQ_MODEL`, `GROQ_TIMEOUT` y `GROQ_MAX_TOKENS`. La clave nunca se comparte con Inertia ni se consume desde Vue. Mientras la integración no esté habilitada, o si el proveedor falla o devuelve una respuesta inválida, se usa el modo simulado con el mismo contrato estructurado.
 
 ## Estado de implementación
 
@@ -96,6 +96,7 @@ La integración se configurará mediante `GROQ_ENABLED`, `GROQ_API_KEY`, `GROQ_A
 - Historial inmutable de transiciones, reprogramaciones, usuario y datos anteriores.
 - Duración calculada en el backend desde el servicio seleccionado.
 - Validación de disponibilidad semanal y vigencia del horario del mecánico.
+- El formulario ofrece durante 90 días únicamente fechas laborales con cupos y horas libres en intervalos de 30 minutos, según la duración del servicio y las citas no canceladas.
 - Prevención de solapamientos dentro de una transacción con bloqueo asesor de PostgreSQL.
 - Cancelaciones con motivo, responsable y fecha, sin eliminación física.
 - Formularios y agenda responsivos mediante Inertia y Nuxt UI.
@@ -265,3 +266,36 @@ Verificación manual:
 2. Aplicar filtros de cliente, vehículo, mecánico o servicio.
 3. Comparar el total de ingresos con pagos vigentes del mismo periodo.
 4. Exportar cada sección y confirmar el evento `reporte.exportado` en Auditoría.
+
+### Fase 17: diagnóstico IA y agenda operativa
+
+- El diagnóstico IA usa el contrato versionado `diagnostico.v2` y conserva prompt, esquema, respuesta original, respuesta cruda y metadatos de generación.
+- El resultado separa resumen para cliente, análisis técnico, hipótesis con evidencias, pruebas, riesgo, circulación, tiempos, herramientas, servicios y posibles repuestos.
+- Las respuestas inválidas del proveedor activan un fallback controlado que conserva la advertencia y nunca autoriza reparaciones, consumos o circulación.
+- La sugerencia de mecánico se calcula con especialidad, horario, órdenes activas y citas futuras; teléfonos, cargas y notas internas solo se entregan a revisores autorizados.
+- Confirmaciones, modificaciones y descartes crean revisiones versionadas; una modificación se presenta como respuesta vigente sin alterar la respuesta original.
+- El descarte exige motivo y la prioridad corregida se refleja en listados y resúmenes operativos.
+- La consulta puede vincularse a una cita y posteriormente a una orden sin duplicar registros; ambas vinculaciones se revalidan bajo bloqueo transaccional.
+- La creación de citas valida en el servidor la relación cliente-vehículo y la compatibilidad entre especialidad, servicio y mecánico.
+- El calendario independiente ofrece vistas Día, Semana y Mes, filtros por mecánico y estado, navegación por periodos y detalle de citas.
+- La orden muestra el diagnóstico IA vigente, su revisión humana y accesos condicionados por permisos a IA y calendario.
+- El mecánico asignado a la cita o a la orden puede revisar la consulta; una sugerencia inicial deja de conceder acceso cuando existe una asignación operativa distinta.
+- Una orden no puede entrar en reparación, completar servicios ni consumir repuestos sin diagnóstico técnico humano vigente; si tiene IA vinculada, esta debe estar confirmada o modificada.
+- Las citas se interpretan en `America/Bogota`, validan disponibilidad nuevamente al confirmar y no pueden marcarse atendidas antes de comenzar o sin mecánico.
+- Las citas atendidas ofrecen la acción idempotente `Crear orden`; los reintentos abren la orden existente sin duplicar auditoría ni historial.
+- Después de entregar el vehículo no se permite anular o reembolsar pagos ni anular la factura, conservando el cierre financiero verificado.
+- Inventario presenta conteos reales de referencias normales, bajas y agotadas, además de movimientos con saldo anterior y resultante.
+- Los movimientos solo exponen responsable a gestores; una orden asociada solo se muestra a usuarios que pueden consultarla.
+- Los índices operativos cubren alertas de stock, proveedor/estado y libro de movimientos por repuesto, tipo y fecha.
+- Inventario aparece como una única opción de navegación y concentra globos verde/amarillo/rojo, filtros, catálogo, detalle, edición, entradas, ajustes, trazabilidad y accesos a Diagnóstico IA y Reportes.
+- Cada referencia permite consultar su libro de movimientos, editar sus datos, registrar stock y cambiar de estado sin eliminación física.
+- Reportes aparece como una única opción y reúne en una vista dinámica órdenes, ingresos, inventario, estados IA, servicios, repuestos y vehículos por cliente.
+- Los filtros rápidos y globales actualizan todas las métricas; cada exportación CSV conserva exactamente el periodo y criterios seleccionados.
+
+Verificación manual:
+
+1. Generar un diagnóstico con Groq deshabilitado y confirmar que el fallback muestre riesgo, circulación y advertencia.
+2. Modificar y descartar diagnósticos con un mecánico; comprobar que la respuesta original permanezca intacta y el descarte exija motivo.
+3. Agendar una cita desde IA, abrirla en el calendario y convertirla una sola vez en orden cuando esté atendida.
+4. Abrir la orden y confirmar que muestre la respuesta humana vigente y no una corrección interna obsoleta.
+5. Registrar entradas y salidas de inventario y revisar tarjetas, saldos y visibilidad de la orden asociada según el rol.

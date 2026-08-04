@@ -18,4 +18,6 @@ class MecanicoEloquentModel extends Model
     public function usuario(): BelongsTo { return $this->belongsTo(UserEloquentModel::class, 'usuario_id'); }
     public function especialidades(): BelongsToMany { return $this->belongsToMany(EspecialidadEloquentModel::class, 'mecanico_especialidad', 'mecanico_id', 'especialidad_id')->withPivot(['activo', 'asignado_en', 'asignado_por']); }
     public function disponibilidades(): HasMany { return $this->hasMany(DisponibilidadMecanicoEloquentModel::class, 'mecanico_id'); }
+    public function asignaciones(): HasMany { return $this->hasMany(\Src\OrdenTrabajo\Infrastructure\Models\OrdenMecanicoEloquentModel::class, 'mecanico_id'); }
+    public function citas(): HasMany { return $this->hasMany(\Src\Cita\Infrastructure\Models\CitaEloquentModel::class, 'mecanico_id'); }
 }

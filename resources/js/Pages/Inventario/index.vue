@@ -3,140 +3,65 @@ import { computed, reactive, ref } from 'vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import { route } from 'ziggy-js'
 import { usePermissions } from '../../composables/usePermissions'
-import { normalizarTelefono } from '../../utils/validation'
 
-interface Catalogo { id: string; nombre: string; estado: string }
-interface Proveedor extends Catalogo { documento: string }
-interface Repuesto {
-  id: string; codigo: string; nombre: string; descripcion?: string; unidad: string
-  stock_actual: string; stock_minimo: string; costo_referencia: string; precio_venta: string; estado: string
-  categoria: Catalogo; proveedor?: Catalogo
-}
-interface Movimiento {
-  id: string; tipo: string; cantidad: string; stock_resultante: string; motivo: string; created_at: string
-  repuesto: { codigo: string; nombre: string }
-}
-interface Pagina<T> { data: T[]; links: { url: string | null; label: string; active: boolean }[]; total: number }
+interface Catalogo { id:string;nombre:string;estado:string }
+interface Proveedor extends Catalogo { documento:string }
+interface Repuesto { id:string;codigo:string;nombre:string;descripcion?:string;unidad:string;stock_actual:string;stock_minimo:string;costo_referencia:string;precio_venta:string;estado:string;categoria:Catalogo;proveedor?:Catalogo }
+interface Movimiento { id:string;tipo:string;cantidad:string;stock_anterior:string;stock_resultante:string;motivo:string;created_at:string;repuesto:{codigo:string;nombre:string;unidad:string};orden?:{id:string;numero:string};usuario?:{name:string} }
+interface Pagina<T> { data:T[];links:{url:string|null;label:string;active:boolean}[];total:number }
 
-const props = defineProps<{ vista:string; repuestos: Pagina<Repuesto>; movimientos: Movimiento[]; categorias: Catalogo[]; proveedores: Proveedor[]; filtros:{buscar:string;estado:string;categoria:string;proveedor:string;bajo:boolean};stats:{total:number;bajos:number;agotados:number} }>()
-const { can } = usePermissions()
-const errors = computed<Record<string, string>>(() => usePage().props.errors as Record<string, string>)
-const procesando = ref(false)
-const filtros = reactive({
-  ...props.filtros,
-  estado: props.filtros.estado || 'todos',
-  categoria: props.filtros.categoria || 'todas',
-  proveedor: props.filtros.proveedor || 'todos'
-})
-const categoria = reactive({ nombre: '', descripcion: '' })
-const proveedor = reactive({ documento: '', nombre: '', contacto: '', telefono: '', email: '' })
-const repuesto = reactive({ categoriaId: '', proveedorId: '', codigo: '', nombre: '', descripcion: '', unidad: 'unidad', stockMinimo: '0.000', costoReferencia: '0.00', precioVenta: '0.00' })
-const movimiento = reactive({ repuestoId: '', tipo: 'entrada', cantidad: '', costoUnitario: '', motivo: '' })
-const opcionesRepuestos = computed(() => props.repuestos.data.filter(p => p.estado === 'activo').map(p => ({ label: `${p.codigo} · ${p.nombre} (${p.stock_actual} ${p.unidad})`, value: p.id })))
-const unidades = ['unidad', 'litro', 'metro', 'kilogramo', 'juego']
-const titulo = computed(() => ({
-  resumen: 'Inventario de repuestos',
-  'nueva-referencia': 'Nueva referencia',
-  'registrar-movimiento': 'Registrar movimiento',
-  'catalogos-auxiliares': 'Catálogos auxiliares',
-  catalogo: 'Catálogo de repuestos',
-  'ultimos-movimientos': 'Últimos movimientos'
-}[props.vista] || 'Inventario de repuestos'))
+const props=defineProps<{repuestos:Pagina<Repuesto>;repuestosMovimiento:{id:string;codigo:string;nombre:string;unidad:string;stock_actual:string}[];movimientos:Movimiento[];categorias:Catalogo[];proveedores:Proveedor[];filtros:{buscar:string;estado:string;categoria:string;proveedor:string;bajo:boolean};stats:{total:number;ok:number;bajos:number;agotados:number}}>()
+const {can,canAny}=usePermissions()
+const errors=computed<Record<string,string>>(()=>usePage().props.errors as Record<string,string>)
+const procesando=ref(false)
+const modalReferencia=ref(false)
+const modalMovimiento=ref(false)
+const filtros=reactive({buscar:props.filtros.buscar||'',estado:props.filtros.estado||'todos',categoria:props.filtros.categoria||'todas',proveedor:props.filtros.proveedor||'todos',bajo:props.filtros.bajo})
+const repuesto=reactive({categoriaId:'',proveedorId:'',codigo:'',nombre:'',descripcion:'',unidad:'unidad',stockMinimo:'0.000',costoReferencia:'0.00',precioVenta:'0.00'})
+const movimiento=reactive({repuestoId:'',tipo:'entrada',cantidad:'',costoUnitario:'',motivo:''})
+const unidades=['unidad','litro','metro','kilogramo','juego']
+const opcionesRepuestos=computed(()=>props.repuestosMovimiento.map(p=>({label:`${p.codigo} · ${p.nombre} (${numero(p.stock_actual,3)} ${p.unidad})`,value:p.id})))
 
-function enviar(url: string, datos: object, limpiar: () => void) {
-  procesando.value = true
-  router.post(url, datos, { preserveScroll: true, onSuccess: limpiar, onFinish: () => { procesando.value = false } })
-}
-function buscar() { router.get(route('inventario.catalogo'), { buscar:filtros.buscar||undefined,estado:filtros.estado==='todos'?undefined:filtros.estado,categoria:filtros.categoria==='todas'?undefined:filtros.categoria,proveedor:filtros.proveedor==='todos'?undefined:filtros.proveedor,bajo:filtros.bajo?1:undefined }, { preserveState: true, replace:true }) }
-function guardarCategoria() { enviar(route('inventario.categorias.store'), categoria, () => Object.assign(categoria, { nombre: '', descripcion: '' })) }
-function guardarProveedor() { enviar(route('inventario.proveedores.store'), proveedor, () => Object.assign(proveedor, { documento: '', nombre: '', contacto: '', telefono: '', email: '' })) }
-function guardarRepuesto() { enviar(route('inventario.repuestos.store'), repuesto, () => Object.assign(repuesto, { categoriaId: '', proveedorId: '', codigo: '', nombre: '', descripcion: '', unidad: 'unidad', stockMinimo: '0.000', costoReferencia: '0.00', precioVenta: '0.00' })) }
-function registrarMovimiento() { enviar(route('inventario.movimientos.store'), movimiento, () => Object.assign(movimiento, { repuestoId: '', tipo: 'entrada', cantidad: '', costoUnitario: '', motivo: '' })) }
-function cambiarEstado(p: Repuesto, estado = p.estado === 'activo' ? 'inactivo' : 'activo') { if(!confirm(`¿Cambiar ${p.codigo} a ${estado}?`))return;router.patch(route('inventario.repuestos.estado', p.id), { estado }, { preserveScroll: true }) }
-function numero(valor: string, decimales = 2) { return Number(valor).toLocaleString('es-CO', { minimumFractionDigits: decimales, maximumFractionDigits: decimales }) }
+function numero(valor:string|number,decimales=2){return Number(valor).toLocaleString('es-CO',{minimumFractionDigits:decimales,maximumFractionDigits:decimales})}
+function nivelStock(p:Repuesto){return Number(p.stock_actual)<=0?'agotado':Number(p.stock_actual)<=Number(p.stock_minimo)?'bajo':'ok'}
+function buscar(){router.get(route('inventario.index'),{buscar:filtros.buscar||undefined,estado:filtros.estado==='todos'?undefined:filtros.estado,categoria:filtros.categoria==='todas'?undefined:filtros.categoria,proveedor:filtros.proveedor==='todos'?undefined:filtros.proveedor,bajo:filtros.bajo?1:undefined},{preserveState:true,replace:true})}
+function limpiarFiltros(){Object.assign(filtros,{buscar:'',estado:'todos',categoria:'todas',proveedor:'todas',bajo:false});router.get(route('inventario.index'))}
+function guardarReferencia(){procesando.value=true;router.post(route('inventario.repuestos.store'),repuesto,{preserveScroll:true,onSuccess:()=>{modalReferencia.value=false;Object.assign(repuesto,{categoriaId:'',proveedorId:'',codigo:'',nombre:'',descripcion:'',unidad:'unidad',stockMinimo:'0.000',costoReferencia:'0.00',precioVenta:'0.00'})},onFinish:()=>procesando.value=false})}
+function abrirMovimiento(p?:Repuesto){movimiento.repuestoId=p?.id||'';modalMovimiento.value=true}
+function registrarMovimiento(){procesando.value=true;router.post(route('inventario.movimientos.store'),movimiento,{preserveScroll:true,onSuccess:()=>{modalMovimiento.value=false;Object.assign(movimiento,{repuestoId:'',tipo:'entrada',cantidad:'',costoUnitario:'',motivo:''})},onFinish:()=>procesando.value=false})}
+function cambiarEstado(p:Repuesto){const estado=p.estado==='activo'?'inactivo':'activo';if(confirm(`¿Cambiar ${p.codigo} a ${estado}?`))router.patch(route('inventario.repuestos.estado',p.id),{estado},{preserveScroll:true})}
 </script>
 
 <template>
-  <Head :title="titulo" />
+  <Head title="Inventario"/>
   <UDashboardPanel>
-    <template #header><UDashboardNavbar :title="titulo"><template #leading><UDashboardSidebarCollapse /></template></UDashboardNavbar></template>
-    <template #body>
-      <div class="space-y-6">
-        <div v-if="vista==='resumen'" class="grid gap-4 sm:grid-cols-3">
-          <UCard><p class="text-sm text-muted">Referencias totales</p><p class="mt-1 text-3xl font-semibold">{{ stats.total }}</p></UCard>
-          <UCard><p class="text-sm text-muted">Bajo stock global</p><p class="mt-1 text-3xl font-semibold" :class="stats.bajos ? 'text-warning' : 'text-success'">{{ stats.bajos }}</p></UCard>
-          <UCard><p class="text-sm text-muted">Sin existencias</p><p class="mt-1 text-3xl font-semibold" :class="stats.agotados ? 'text-error' : ''">{{ stats.agotados }}</p></UCard>
-        </div>
+    <template #header><UDashboardNavbar title="Inventario"><template #leading><UDashboardSidebarCollapse/></template><template #right><Link v-if="canAny(['ia.solicitar','ia.revisar'])" :href="route('ia.index')"><UButton label="Diagnóstico IA" icon="i-lucide-brain-circuit" color="neutral" variant="outline"/></Link><Link v-if="can('reportes.ver')" :href="route('reportes.index')"><UButton label="Reportes" icon="i-lucide-chart-column-big" color="neutral" variant="outline"/></Link></template></UDashboardNavbar></template>
+    <template #body><div class="space-y-6">
+      <section class="grid gap-4 md:grid-cols-3">
+        <article class="overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 p-5 text-white shadow-lg shadow-emerald-500/20"><div class="flex items-center gap-4"><span class="grid size-12 place-items-center rounded-full border border-white/25 bg-white/15"><UIcon name="i-lucide-package-check" class="size-6"/></span><div><p class="text-sm font-bold">Stock OK</p><p class="font-mono text-4xl font-black">{{stats.ok}}</p></div></div><p class="mt-3 text-xs text-white/75">Referencias activas por encima de su mínimo.</p></article>
+        <article class="overflow-hidden rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 p-5 text-white shadow-lg shadow-amber-500/20"><div class="flex items-center gap-4"><span class="grid size-12 place-items-center rounded-full border border-white/25 bg-white/15"><UIcon name="i-lucide-triangle-alert" class="size-6"/></span><div><p class="text-sm font-bold">Stock bajo</p><p class="font-mono text-4xl font-black">{{stats.bajos}}</p></div></div><p class="mt-3 text-xs text-white/80">Existencias disponibles en el mínimo o por debajo.</p></article>
+        <article class="overflow-hidden rounded-2xl bg-gradient-to-br from-rose-500 to-red-700 p-5 text-white shadow-lg shadow-red-500/20"><div class="flex items-center gap-4"><span class="grid size-12 place-items-center rounded-full border border-white/25 bg-white/15"><UIcon name="i-lucide-package-x" class="size-6"/></span><div><p class="text-sm font-bold">Agotado</p><p class="font-mono text-4xl font-black">{{stats.agotados}}</p></div></div><p class="mt-3 text-xs text-white/75">Referencias activas sin existencias.</p></article>
+      </section>
 
-        <div v-if="can('inventario.gestionar')&&['resumen','nueva-referencia','registrar-movimiento'].includes(vista)" class="grid gap-6" :class="vista==='resumen'?'xl:grid-cols-2':'grid-cols-1'">
-          <section v-if="vista==='resumen'||vista==='nueva-referencia'" class="w-full"><UCard>
-            <template #header><div><h2 class="font-semibold">Nueva referencia</h2><p class="text-sm text-muted">El saldo inicial se registra después como una entrada.</p></div></template>
-            <form class="grid gap-4 sm:grid-cols-2" @submit.prevent="guardarRepuesto">
-              <UFormField label="Código" required :error="errors.codigo"><UInput v-model="repuesto.codigo" class="w-full" /></UFormField>
-              <UFormField label="Nombre" required :error="errors.nombre"><UInput v-model="repuesto.nombre" class="w-full" /></UFormField>
-              <UFormField label="Categoría" required :error="errors.categoriaId"><USelect v-model="repuesto.categoriaId" :items="categorias.filter(c=>c.estado==='activo').map(c => ({ label: c.nombre, value: c.id }))" class="w-full" /></UFormField>
-              <UFormField label="Proveedor"><USelect v-model="repuesto.proveedorId" :items="proveedores.filter(p=>p.estado==='activo').map(p => ({ label: p.nombre, value: p.id }))" class="w-full" /></UFormField>
-              <UFormField label="Unidad" required><USelect v-model="repuesto.unidad" :items="unidades" class="w-full" /></UFormField>
-              <UFormField label="Stock mínimo" required :error="errors.stockMinimo"><UInput v-model="repuesto.stockMinimo" type="number" min="0" step="0.001" class="w-full" /></UFormField>
-              <UFormField label="Costo de referencia" required><UInput v-model="repuesto.costoReferencia" type="number" min="0" step="0.01" class="w-full" /></UFormField>
-              <UFormField label="Precio de venta" required><UInput v-model="repuesto.precioVenta" type="number" min="0" step="0.01" class="w-full" /></UFormField>
-              <UFormField class="sm:col-span-2" label="Descripción"><UTextarea v-model="repuesto.descripcion" class="w-full" /></UFormField>
-              <div class="sm:col-span-2 text-right"><UButton type="submit" label="Crear repuesto" :loading="procesando" /></div>
-            </form>
-          </UCard></section>
+      <UCard>
+        <template #header><div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"><div><h2 class="text-lg font-bold">Catálogo de inventario</h2><p class="text-sm text-muted">{{repuestos.total}} referencias encontradas · {{stats.total}} activas en total</p></div><div v-if="can('inventario.gestionar')" class="flex flex-wrap gap-2"><Link :href="route('inventario.catalogos')"><UButton label="Categorías y proveedores" icon="i-lucide-library-big" color="neutral" variant="outline"/></Link><UButton label="Registrar movimiento" icon="i-lucide-arrow-left-right" color="neutral" variant="outline" @click="abrirMovimiento()"/><UButton label="Nueva referencia" icon="i-lucide-package-plus" @click="modalReferencia=true"/></div></div></template>
+        <form class="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(18rem,2fr)_1fr_1fr_1fr_auto]" @submit.prevent="buscar">
+          <UInput v-model="filtros.buscar" icon="i-lucide-search" placeholder="Código, nombre o proveedor"/>
+          <USelect v-model="filtros.categoria" :items="[{label:'Todas las categorías',value:'todas'},...categorias.map(c=>({label:c.nombre,value:c.id}))]"/>
+          <USelect v-model="filtros.proveedor" :items="[{label:'Todos los proveedores',value:'todos'},...proveedores.map(p=>({label:p.nombre,value:p.id}))]"/>
+          <USelect v-model="filtros.estado" :items="[{label:'Todos los estados',value:'todos'},{label:'Solo activos',value:'activo'},{label:'Inactivos',value:'inactivo'},{label:'Archivados',value:'archivado'}]"/>
+          <div class="flex gap-2"><UButton type="submit" icon="i-lucide-search" label="Buscar"/><UButton type="button" icon="i-lucide-rotate-ccw" color="neutral" variant="ghost" aria-label="Limpiar filtros" @click="limpiarFiltros"/></div>
+          <UCheckbox v-model="filtros.bajo" label="Solo stock bajo con existencias" class="md:col-span-2 xl:col-span-5"/>
+        </form>
+        <div class="overflow-x-auto rounded-xl border border-default"><table class="w-full min-w-[1050px] text-sm"><thead class="bg-elevated/70 text-left"><tr><th class="p-3">Código</th><th class="p-3">Repuesto</th><th class="p-3">Categoría</th><th class="p-3 text-right">Precio</th><th class="p-3">Stock / mínimo</th><th class="p-3">Nivel</th><th class="p-3">Estado</th><th class="p-3 text-right">Acciones</th></tr></thead><tbody><tr v-for="p in repuestos.data" :key="p.id" class="border-t border-default transition hover:bg-elevated/45"><td class="p-3 font-mono font-bold text-primary">{{p.codigo}}</td><td class="p-3"><p class="font-semibold">{{p.nombre}}</p><p class="text-xs text-muted">{{p.proveedor?.nombre||'Sin proveedor'}}</p></td><td class="p-3">{{p.categoria.nombre}}</td><td class="p-3 text-right font-mono">$ {{numero(p.precio_venta)}}</td><td class="p-3"><p class="font-mono font-bold">{{numero(p.stock_actual,3)}} {{p.unidad}}</p><p class="text-xs text-muted">mínimo {{numero(p.stock_minimo,3)}}</p></td><td class="p-3"><UBadge :color="nivelStock(p)==='agotado'?'error':nivelStock(p)==='bajo'?'warning':'success'" variant="subtle">{{nivelStock(p)==='agotado'?'Agotado':nivelStock(p)==='bajo'?'Bajo':'OK'}}</UBadge></td><td class="p-3"><UBadge :color="p.estado==='activo'?'success':'neutral'" variant="subtle">{{p.estado}}</UBadge></td><td class="p-3"><div class="flex justify-end gap-1"><Link :href="route('inventario.repuestos.show',p.id)"><UButton icon="i-lucide-eye" size="xs" color="neutral" variant="outline" aria-label="Ver detalle"/></Link><UButton v-if="can('inventario.gestionar')&&p.estado==='activo'" icon="i-lucide-package-plus" size="xs" color="success" variant="outline" aria-label="Registrar stock" @click="abrirMovimiento(p)"/><Link v-if="can('inventario.gestionar')" :href="route('inventario.repuestos.edit',p.id)"><UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="outline" aria-label="Editar"/></Link><UButton v-if="can('inventario.gestionar')" :icon="p.estado==='activo'?'i-lucide-archive':'i-lucide-archive-restore'" size="xs" color="neutral" variant="ghost" :aria-label="p.estado==='activo'?'Desactivar':'Activar'" @click="cambiarEstado(p)"/></div></td></tr><tr v-if="!repuestos.data.length"><td colspan="8" class="p-10 text-center text-muted">No hay referencias para los filtros seleccionados.</td></tr></tbody></table></div>
+        <div class="mt-4 flex flex-wrap gap-2"><Link v-for="link in repuestos.links" :key="link.label" :href="link.url||''" preserve-scroll><UButton :disabled="!link.url" :variant="link.active?'solid':'outline'" color="neutral" size="sm"><span v-html="link.label"/></UButton></Link></div>
+      </UCard>
 
-          <section v-if="vista==='resumen'||vista==='registrar-movimiento'" class="w-full"><UCard>
-            <template #header><div><h2 class="font-semibold">Registrar movimiento</h2><p class="text-sm text-muted">Las salidas de órdenes se registran desde la orden de trabajo.</p></div></template>
-            <form class="space-y-4" @submit.prevent="registrarMovimiento">
-              <UFormField label="Repuesto" required :error="errors.repuestoId"><USelect v-model="movimiento.repuestoId" :items="opcionesRepuestos" class="w-full" /></UFormField>
-              <div class="grid gap-4 sm:grid-cols-2">
-                <UFormField label="Tipo" required><USelect v-model="movimiento.tipo" :items="[{ label: 'Entrada', value: 'entrada' }, { label: 'Ajuste', value: 'ajuste' }]" class="w-full" /></UFormField>
-                <UFormField label="Cantidad" required :error="errors.cantidad"><UInput v-model="movimiento.cantidad" type="number" step="0.001" class="w-full" /></UFormField>
-              </div>
-              <UFormField label="Costo unitario"><UInput v-model="movimiento.costoUnitario" type="number" min="0" step="0.01" class="w-full" /></UFormField>
-              <UFormField label="Motivo" required :error="errors.motivo"><UTextarea v-model="movimiento.motivo" class="w-full" placeholder="Compra, corrección por conteo físico..." /></UFormField>
-              <div class="text-right"><UButton type="submit" label="Aplicar movimiento" :loading="procesando" /></div>
-            </form>
-          </UCard></section>
-        </div>
-
-        <UCard v-if="can('inventario.gestionar')&&(vista==='resumen'||vista==='catalogos-auxiliares')" class="w-full">
-          <template #header><div class="flex items-center justify-between"><h2 class="font-semibold">Catálogos auxiliares</h2><Link :href="route('inventario.catalogos')"><UButton size="sm" color="neutral" variant="outline" label="Administrar catálogos"/></Link></div></template>
-          <div class="grid gap-6 lg:grid-cols-2">
-            <form class="grid gap-3 sm:grid-cols-2" @submit.prevent="guardarCategoria">
-              <UFormField label="Nueva categoría" required><UInput v-model="categoria.nombre" class="w-full" /></UFormField>
-              <UFormField label="Descripción"><UInput v-model="categoria.descripcion" class="w-full" /></UFormField>
-              <div class="sm:col-span-2 text-right"><UButton type="submit" size="sm" color="neutral" label="Agregar categoría" /></div>
-            </form>
-            <form class="grid gap-3 sm:grid-cols-2" @submit.prevent="guardarProveedor">
-              <UFormField label="Documento o NIT" required :error="errors.documento"><UInput v-model="proveedor.documento" maxlength="40" required class="w-full" /></UFormField>
-              <UFormField label="Proveedor" required :error="errors.nombre"><UInput v-model="proveedor.nombre" maxlength="180" required class="w-full" /></UFormField>
-              <UFormField label="Contacto" hint="Opcional"><UInput v-model="proveedor.contacto" maxlength="120" class="w-full" /></UFormField>
-              <UFormField label="Teléfono" hint="Opcional. 10 dígitos o con prefijo +57." :error="errors.telefono"><UInput v-model="proveedor.telefono" type="tel" inputmode="tel" autocomplete="tel" maxlength="13" class="w-full" @update:model-value="proveedor.telefono = normalizarTelefono(String($event))" /></UFormField>
-              <UFormField label="Correo" hint="Opcional" :error="errors.email"><UInput v-model="proveedor.email" type="email" autocomplete="email" maxlength="254" class="w-full" /></UFormField>
-              <div class="self-end text-right"><UButton type="submit" size="sm" color="neutral" label="Agregar proveedor" /></div>
-            </form>
-          </div>
-        </UCard>
-
-        <div v-if="['resumen','catalogo','ultimos-movimientos'].includes(vista)" class="grid gap-6" :class="vista==='resumen'?'xl:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)]':'grid-cols-1'">
-          <section v-if="vista==='resumen'||vista==='catalogo'" class="space-y-4">
-            <div><h2 class="mb-3 text-lg font-semibold">Catálogo</h2><form class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3" @submit.prevent="buscar"><UInput v-model="filtros.buscar" icon="i-lucide-search" placeholder="Código o nombre"/><USelect v-model="filtros.estado" :items="[{label:'Todos los estados',value:'todos'},{label:'Activos',value:'activo'},{label:'Inactivos',value:'inactivo'},{label:'Archivados',value:'archivado'}]"/><USelect v-model="filtros.categoria" :items="[{label:'Todas las categorías',value:'todas'},...categorias.map(c=>({label:c.nombre,value:c.id}))]"/><USelect v-model="filtros.proveedor" :items="[{label:'Todos los proveedores',value:'todos'},...proveedores.map(p=>({label:p.nombre,value:p.id}))]"/><UCheckbox v-model="filtros.bajo" label="Solo bajo mínimo"/><UButton type="submit" label="Aplicar filtros" icon="i-lucide-list-filter"/></form></div>
-            <ul class="divide-y divide-default overflow-hidden rounded-lg border border-default bg-default">
-              <li v-for="p in repuestos.data" :key="p.id" class="p-4 transition-colors hover:bg-elevated/40">
-              <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div><div class="flex flex-wrap items-center gap-2"><Link :href="route('inventario.repuestos.show',p.id)" class="font-semibold text-primary hover:underline">{{ p.codigo }} · {{ p.nombre }}</Link><UBadge :color="p.estado === 'activo' ? 'success' : 'neutral'">{{ p.estado }}</UBadge><UBadge v-if="Number(p.stock_actual) <= Number(p.stock_minimo)" color="warning" variant="subtle">Stock bajo</UBadge></div><p class="mt-1 text-sm text-muted">{{ p.categoria.nombre }} · {{ p.proveedor?.nombre || 'Sin proveedor' }} · {{ p.unidad }}</p><p v-if="p.descripcion" class="mt-2 text-sm">{{ p.descripcion }}</p></div>
-                <div class="shrink-0 text-left sm:text-right"><p class="text-2xl font-semibold">{{ numero(p.stock_actual, 3) }}</p><p class="text-xs text-muted">mínimo {{ numero(p.stock_minimo, 3) }}</p><p class="mt-2 text-sm">Venta $ {{ numero(p.precio_venta) }}</p><div v-if="can('inventario.gestionar')" class="mt-2 flex flex-wrap justify-end gap-1"><Link :href="route('inventario.repuestos.edit',p.id)"><UButton size="xs" color="neutral" variant="ghost" label="Editar"/></Link><UButton size="xs" color="neutral" variant="ghost" :label="p.estado==='activo'?'Desactivar':'Activar'" @click="cambiarEstado(p)"/><UButton v-if="p.estado!=='archivado'" size="xs" color="error" variant="ghost" label="Archivar" @click="cambiarEstado(p,'archivado')"/></div></div>
-              </div>
-              </li>
-              <li v-if="!repuestos.data.length" class="py-8 text-center text-muted">No hay repuestos para mostrar.</li>
-            </ul>
-            <div class="flex flex-wrap gap-2"><Link v-for="link in repuestos.links" :key="link.label" :href="link.url || ''" preserve-scroll><UButton :disabled="!link.url" :variant="link.active ? 'solid' : 'outline'" color="neutral" size="sm"><span v-html="link.label" /></UButton></Link></div>
-          </section>
-
-          <section v-if="vista==='resumen'||vista==='ultimos-movimientos'"><h2 class="mb-4 text-lg font-semibold">Últimos movimientos</h2><ul class="divide-y divide-default overflow-hidden rounded-lg border border-default bg-default"><li v-for="m in movimientos" :key="m.id" class="p-4"><div class="flex items-start justify-between gap-3"><div><p class="text-sm font-medium">{{ m.repuesto.codigo }} · {{ m.repuesto.nombre }}</p><p class="mt-1 text-xs text-muted">{{ m.motivo }}</p><p class="mt-1 text-xs text-muted">{{new Date(m.created_at).toLocaleString('es-CO')}}</p></div><div class="text-right"><UBadge :color="Number(m.cantidad) > 0 ? 'success' : 'error'">{{ Number(m.cantidad) > 0 ? '+' : '' }}{{ numero(m.cantidad, 3) }}</UBadge><p class="mt-1 text-xs text-muted">saldo {{ numero(m.stock_resultante, 3) }}</p></div></div></li><li v-if="!movimientos.length" class="p-6 text-center text-muted">Sin movimientos.</li></ul></section>
-        </div>
-      </div>
-    </template>
+      <UCard><template #header><div><h2 class="font-bold">Últimos movimientos</h2><p class="text-sm text-muted">Trazabilidad reciente del saldo de inventario.</p></div></template><div class="grid gap-3 lg:grid-cols-2"><article v-for="m in movimientos" :key="m.id" class="flex items-start justify-between gap-3 rounded-xl border border-default bg-elevated/40 p-4"><div><div class="flex flex-wrap items-center gap-2"><span class="font-mono text-xs font-bold text-primary">{{m.repuesto.codigo}}</span><UBadge :color="Number(m.cantidad)>0?'success':'error'" variant="subtle">{{m.tipo}}</UBadge><Link v-if="m.orden" :href="route('ordenes.show',m.orden.id)" class="text-xs text-primary">{{m.orden.numero}}</Link></div><p class="mt-1 font-semibold">{{m.repuesto.nombre}}</p><p class="text-xs text-muted">{{m.motivo}}</p><p class="mt-2 text-[11px] text-dimmed">{{new Date(m.created_at).toLocaleString('es-CO')}} · {{m.usuario?.name||'Sistema'}}</p></div><div class="text-right"><p class="font-mono text-lg font-black" :class="Number(m.cantidad)>0?'text-success':'text-error'">{{Number(m.cantidad)>0?'+':''}}{{numero(m.cantidad,3)}}</p><p class="text-xs text-muted">{{numero(m.stock_anterior,3)}} → <strong>{{numero(m.stock_resultante,3)}}</strong></p></div></article><p v-if="!movimientos.length" class="py-8 text-center text-muted lg:col-span-2">Todavía no hay movimientos.</p></div></UCard>
+    </div></template>
   </UDashboardPanel>
+
+  <UModal v-model:open="modalReferencia" title="Nueva referencia" description="Crea el repuesto; registra luego una entrada para aumentar el saldo."><template #body><form id="form-referencia" class="grid gap-4 sm:grid-cols-2" @submit.prevent="guardarReferencia"><UFormField label="Código" required :error="errors.codigo"><UInput v-model="repuesto.codigo" class="w-full"/></UFormField><UFormField label="Nombre" required :error="errors.nombre"><UInput v-model="repuesto.nombre" class="w-full"/></UFormField><UFormField label="Categoría" required :error="errors.categoriaId||errors.categoria_id"><USelect v-model="repuesto.categoriaId" :items="categorias.filter(c=>c.estado==='activo').map(c=>({label:c.nombre,value:c.id}))" class="w-full"/></UFormField><UFormField label="Proveedor"><USelect v-model="repuesto.proveedorId" :items="proveedores.filter(p=>p.estado==='activo').map(p=>({label:p.nombre,value:p.id}))" class="w-full"/></UFormField><UFormField label="Unidad" required><USelect v-model="repuesto.unidad" :items="unidades" class="w-full"/></UFormField><UFormField label="Stock mínimo" required :error="errors.stockMinimo||errors.stock_minimo"><UInput v-model="repuesto.stockMinimo" type="number" min="0" step="0.001" class="w-full"/></UFormField><UFormField label="Costo referencia" required><UInput v-model="repuesto.costoReferencia" type="number" min="0" step="0.01" class="w-full"/></UFormField><UFormField label="Precio de venta" required><UInput v-model="repuesto.precioVenta" type="number" min="0" step="0.01" class="w-full"/></UFormField><UFormField class="sm:col-span-2" label="Descripción"><UTextarea v-model="repuesto.descripcion" class="w-full"/></UFormField></form></template><template #footer><div class="flex w-full justify-end gap-2"><UButton label="Cancelar" color="neutral" variant="outline" @click="modalReferencia=false"/><UButton type="submit" form="form-referencia" label="Crear referencia" :loading="procesando"/></div></template></UModal>
+
+  <UModal v-model:open="modalMovimiento" title="Registrar movimiento de stock" description="Las entradas suman. Los ajustes positivos suman y los negativos restan."><template #body><form id="form-movimiento" class="space-y-4" @submit.prevent="registrarMovimiento"><UFormField label="Repuesto" required :error="errors.repuestoId||errors.repuesto_id"><USelect v-model="movimiento.repuestoId" :items="opcionesRepuestos" class="w-full"/></UFormField><div class="grid gap-4 sm:grid-cols-2"><UFormField label="Tipo" required><USelect v-model="movimiento.tipo" :items="[{label:'Entrada (+ stock)',value:'entrada'},{label:'Ajuste (+ / - stock)',value:'ajuste'}]" class="w-full"/></UFormField><UFormField label="Cantidad" required :error="errors.cantidad"><UInput v-model="movimiento.cantidad" type="number" step="0.001" :min="movimiento.tipo==='entrada'?0.001:undefined" class="w-full"/></UFormField></div><UFormField label="Costo unitario"><UInput v-model="movimiento.costoUnitario" type="number" min="0" step="0.01" class="w-full"/></UFormField><UFormField label="Motivo" required :error="errors.motivo"><UTextarea v-model="movimiento.motivo" placeholder="Compra, conteo físico, corrección..." class="w-full"/></UFormField></form></template><template #footer><div class="flex w-full justify-end gap-2"><UButton label="Cancelar" color="neutral" variant="outline" @click="modalMovimiento=false"/><UButton type="submit" form="form-movimiento" label="Aplicar movimiento" :loading="procesando"/></div></template></UModal>
 </template>

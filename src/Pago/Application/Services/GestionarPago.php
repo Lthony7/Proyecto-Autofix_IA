@@ -95,7 +95,10 @@ class GestionarPago
     {
         return DB::transaction(function () use ($pago, $motivo, $usuarioId) {
             $bloqueado = PagoEloquentModel::whereKey($pago->id)->lockForUpdate()->firstOrFail();
-            OrdenTrabajoEloquentModel::whereKey($bloqueado->orden_id)->lockForUpdate()->firstOrFail();
+            $orden = OrdenTrabajoEloquentModel::whereKey($bloqueado->orden_id)->lockForUpdate()->firstOrFail();
+            if ($orden->estado === 'entregada') {
+                throw ValidationException::withMessages(['pago' => 'No se puede anular un pago después de entregar el vehículo.']);
+            }
             if ($bloqueado->estado !== 'registrado') {
                 throw ValidationException::withMessages(['pago' => 'Solo se pueden anular pagos vigentes.']);
             }
@@ -110,7 +113,10 @@ class GestionarPago
     {
         return DB::transaction(function () use ($pago, $motivo, $usuarioId) {
             $bloqueado = PagoEloquentModel::whereKey($pago->id)->lockForUpdate()->firstOrFail();
-            OrdenTrabajoEloquentModel::whereKey($bloqueado->orden_id)->lockForUpdate()->firstOrFail();
+            $orden = OrdenTrabajoEloquentModel::whereKey($bloqueado->orden_id)->lockForUpdate()->firstOrFail();
+            if ($orden->estado === 'entregada') {
+                throw ValidationException::withMessages(['pago' => 'No se puede reembolsar un pago después de entregar el vehículo.']);
+            }
             if ($bloqueado->estado !== 'registrado') {
                 throw ValidationException::withMessages(['pago' => 'Solo se pueden reembolsar pagos vigentes.']);
             }

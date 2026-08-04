@@ -7,7 +7,11 @@ use Illuminate\Validation\Rule;
 
 class CambiarEstadoCitaRequest extends FormRequest
 {
-    public function authorize(): bool { return $this->user()?->canAny(['citas.gestionar', 'citas.cancelar']) ?? false; }
+    public function authorize(): bool
+    {
+        $permiso = $this->input('estado') === 'cancelada' ? 'citas.cancelar' : 'citas.gestionar';
+        return $this->user()?->can($permiso) ?? false;
+    }
     protected function prepareForValidation(): void
     {
         if ($this->input('fecha') && $this->input('horaInicio')) $this->merge(['inicio' => $this->input('fecha').' '.$this->input('horaInicio')]);

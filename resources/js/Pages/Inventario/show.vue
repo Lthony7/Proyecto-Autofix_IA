@@ -11,7 +11,7 @@ interface Repuesto {
     unidad: string;
     stock_actual: string;
     stock_minimo: string;
-    costo_referencia: string;
+    costo_referencia?: string | null;
     precio_venta: string;
     estado: string;
     categoria: { nombre: string };
@@ -109,7 +109,7 @@ function numero(v: string, d = 3) {
                         <p class="text-3xl font-semibold">
                             {{ numero(repuesto.stock_minimo) }}
                         </p></UCard
-                    ><UCard
+                    ><UCard v-if="can('inventario.gestionar')"
                         ><p class="text-sm text-muted">Costo referencia</p>
                         <p class="text-2xl font-semibold">
                             $ {{ numero(repuesto.costo_referencia, 2) }}

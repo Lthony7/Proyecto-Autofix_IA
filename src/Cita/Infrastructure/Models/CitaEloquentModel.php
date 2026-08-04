@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Src\Auth\Infrastructure\Models\UserEloquentModel;
 use Src\Cliente\Infrastructure\Models\ClienteEloquentModel;
 use Src\Taller\Infrastructure\Models\EspecialidadEloquentModel;
@@ -26,6 +27,7 @@ class CitaEloquentModel extends Model
     public function servicio(): BelongsTo { return $this->belongsTo(ServicioEloquentModel::class, 'servicio_id'); }
     public function mecanico(): BelongsTo { return $this->belongsTo(MecanicoEloquentModel::class, 'mecanico_id'); }
     public function historial(): HasMany { return $this->hasMany(CitaEstadoHistorialEloquentModel::class, 'cita_id'); }
+    public function orden(): HasOne { return $this->hasOne(\Src\OrdenTrabajo\Infrastructure\Models\OrdenTrabajoEloquentModel::class, 'cita_id'); }
 
     public function scopeVisiblePara(Builder $query, UserEloquentModel $usuario): Builder
     {

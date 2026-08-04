@@ -67,8 +67,14 @@ const links = computed(() => [[
     label: 'Citas',
     icon: 'i-lucide-calendar-clock',
     url: '/citas',
-    active: page.url.startsWith('/citas'),
+    active: page.url.startsWith('/citas') && !page.url.startsWith('/citas/calendario'),
     onSelect: () => navigateTo('/citas')
+  }, {
+    label: 'Calendario',
+    icon: 'i-lucide-calendar-days',
+    url: '/citas/calendario',
+    active: page.url.startsWith('/citas/calendario'),
+    onSelect: () => navigateTo('/citas/calendario')
   }] : []),
   ...(can('ordenes.ver') ? [{
     label: 'Órdenes de trabajo',
@@ -88,18 +94,9 @@ const links = computed(() => [[
   ...(can('inventario.ver') ? [{
     label: 'Inventario',
     icon: 'i-lucide-warehouse',
-    url: '/inventario/catalogo-repuestos',
+    url: '/inventario',
     active: page.url.startsWith('/inventario'),
-    onSelect: () => navigateTo('/inventario'),
-    children: [
-      ...(can('inventario.gestionar') ? [
-        { label: 'Nueva referencia', icon: 'i-lucide-package-plus', url: '/inventario/nueva-referencia' },
-        { label: 'Registrar movimiento', icon: 'i-lucide-arrow-left-right', url: '/inventario/registrar-movimiento' },
-        { label: 'Catálogos auxiliares', icon: 'i-lucide-library-big', url: '/inventario/catalogos-auxiliares' }
-      ] : []),
-      { label: 'Catálogo de repuestos', icon: 'i-lucide-boxes', url: '/inventario/catalogo-repuestos' },
-      { label: 'Últimos movimientos', icon: 'i-lucide-history', url: '/inventario/ultimos-movimientos' }
-    ]
+    onSelect: () => navigateTo('/inventario')
   }] : []),
   ...(can('pagos.ver') ? [{
     label: 'Pagos',
@@ -125,18 +122,9 @@ const links = computed(() => [[
   ...(can('reportes.ver') ? [{
     label: 'Reportes',
     icon: 'i-lucide-chart-column-big',
-    url: '/reportes/filtros',
+    url: '/reportes',
     active: page.url.startsWith('/reportes'),
-    onSelect: () => navigateTo('/reportes'),
-    children: [
-      { label: 'Filtros globales', icon: 'i-lucide-list-filter', url: '/reportes/filtros' },
-      { label: 'Órdenes pendientes', icon: 'i-lucide-hourglass', url: '/reportes/ordenes-pendientes' },
-      { label: 'Órdenes finalizadas', icon: 'i-lucide-circle-check-big', url: '/reportes/ordenes-finalizadas' },
-      ...(can('reportes.financieros') ? [{ label: 'Ingresos por fecha', icon: 'i-lucide-chart-no-axes-combined', url: '/reportes/ingresos' }] : []),
-      { label: 'Servicios solicitados', icon: 'i-lucide-wrench', url: '/reportes/servicios' },
-      { label: 'Repuestos utilizados', icon: 'i-lucide-package-check', url: '/reportes/repuestos' },
-      { label: 'Vehículos por cliente', icon: 'i-lucide-car-front', url: '/reportes/vehiculos-clientes' }
-    ]
+    onSelect: () => navigateTo('/reportes')
   }] : []),
   ...(can('mecanicos.ver') ? [{
     label: 'Mecánicos',
@@ -170,7 +158,7 @@ const menuSections = computed(() => {
   const definitions = [
     { id: 'principal', label: '', items: ['Inicio'] },
     { id: 'maestros', label: 'Clientes y vehículos', items: ['Clientes', 'Vehículos', 'Mecánicos', 'Servicios del taller'] },
-    { id: 'operacion', label: 'Operación', items: ['Citas', 'Órdenes de trabajo', 'Asistente IA'] },
+    { id: 'operacion', label: 'Operación', items: ['Citas', 'Calendario', 'Órdenes de trabajo', 'Asistente IA'] },
     { id: 'cobro', label: 'Cobro', items: ['Facturación', 'Pagos'] },
     { id: 'gestion', label: 'Gestión', items: ['Historial de servicios', 'Mi Historial de Servicios', 'Bitácora vehicular', 'Inventario', 'Reportes'] },
     { id: 'administracion', label: 'Administración', items: ['Usuarios', 'Auditoría'] }

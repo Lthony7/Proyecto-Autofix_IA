@@ -5,6 +5,8 @@ namespace Src\Cita\Infrastructure\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Src\Cliente\Infrastructure\Models\ClienteEloquentModel;
+use Src\Taller\Infrastructure\Models\MecanicoEloquentModel;
+use Src\Taller\Infrastructure\Models\ServicioEloquentModel;
 use Src\Vehiculo\Infrastructure\Models\VehiculoEloquentModel;
 
 class GuardarCitaRequest extends FormRequest
@@ -28,7 +30,7 @@ class GuardarCitaRequest extends FormRequest
             'vehiculo_id' => ['required', 'uuid', Rule::exists('vehiculos', 'id')->where('estado', 'activo')],
             'especialidad_id' => ['required', 'uuid', Rule::exists('especialidades', 'id')->where('estado', 'activo')],
             'servicio_id' => ['nullable', 'uuid', Rule::exists('servicios_taller', 'id')->where('estado', 'activo')],
-            'mecanico_id' => ['nullable', 'uuid', Rule::exists('mecanicos', 'id')->where('estado', 'activo')],
+            'mecanico_id' => ['required', 'uuid', Rule::exists('mecanicos', 'id')->where('estado', 'activo')],
             'motivo' => ['required', 'string', 'min:10', 'max:3000'], 'kilometraje' => ['nullable', 'integer', 'min:0', 'max:9999999'],
             'inicio' => ['required', 'date', 'after:now'],
             'consulta_ia_id' => ['nullable', 'uuid', Rule::exists('consultas_ia', 'id')],
@@ -40,6 +42,7 @@ class GuardarCitaRequest extends FormRequest
             'cliente_id.required' => 'Selecciona el cliente de la cita.',
             'vehiculo_id.required' => 'Selecciona el vehículo de la cita.',
             'especialidad_id.required' => 'Selecciona la especialidad requerida.',
+            'mecanico_id.required' => 'Selecciona un mecánico para consultar sus fechas y horarios disponibles.',
             'motivo.required' => 'Describe los síntomas o el motivo de la cita.',
             'motivo.min' => 'El motivo debe contener al menos 10 caracteres.',
             'inicio.required' => 'Selecciona la fecha y la hora de la cita.',
@@ -53,7 +56,12 @@ class GuardarCitaRequest extends FormRequest
             $clienteId = $this->input('cliente_id'); $vehiculoId = $this->input('vehiculo_id');
             if ($clienteId && $vehiculoId && ! VehiculoEloquentModel::whereKey($vehiculoId)->where('cliente_id', $clienteId)->exists()) $validator->errors()->add('vehiculoId', 'El vehículo no pertenece al cliente seleccionado.');
             if ($this->user()?->hasRole('Cliente') && ! ClienteEloquentModel::whereKey($clienteId)->where('usuario_id', $this->user()->id)->exists()) $validator->errors()->add('clienteId', 'Solo puedes agendar citas para tu propia cuenta.');
-            if ($this->input('consulta_ia_id') && ! \Src\AsistenteIA\Infrastructure\Models\ConsultaIaEloquentModel::whereKey($this->input('consulta_ia_id'))->where('cliente_id', $clienteId)->where('vehiculo_id', $vehiculoId)->whereNull('cita_id')->exists()) $validator->errors()->add('consultaIaId', 'La consulta IA no está disponible para esta cita.');
+            $vehiculo = $vehiculoId ? VehiculoEloquentModel::find($vehiculoId) : null;
+            if ($vehiculo && $this->filled('kilometraje') && (int) $this->input('kilometraje') < (int) $vehiculo->kilometraje) $validator->errors()->add('kilometraje', "El kilometraje no puede ser menor al último registrado ({$vehiculo->kilometraje} km).");
+            if ($this->input('consulta_ia_id') && ! \Src\AsistenteIA\Infrastructure\Models\ConsultaIaEloquentModel::whereKey($this->input('consulta_ia_id'))->visiblePara($this->user())->where('cliente_id', $clienteId)->where('vehiculo_id', $vehiculoId)->whereNull('cita_id')->exists()) $validator->errors()->add('consultaIaId', 'La consulta IA no está disponible para esta cita.');
+            $especialidadId = $this->input('especialidad_id');
+            if ($this->input('servicio_id') && ! ServicioEloquentModel::whereKey($this->input('servicio_id'))->where('especialidad_id', $especialidadId)->exists()) $validator->errors()->add('servicioId', 'El servicio no pertenece a la especialidad seleccionada.');
+            if ($this->input('mecanico_id') && ! MecanicoEloquentModel::whereKey($this->input('mecanico_id'))->whereHas('especialidades', fn ($q) => $q->where('especialidades.id', $especialidadId)->where('mecanico_especialidad.activo', true))->exists()) $validator->errors()->add('mecanicoId', 'El mecánico no tiene activa la especialidad seleccionada.');
         }];
     }
 }
