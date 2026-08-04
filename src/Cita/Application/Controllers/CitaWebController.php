@@ -28,11 +28,28 @@ class CitaWebController extends Controller
     public function index(Request $request): Response
     {
         $estado = $request->input('estado');
+        $mesSolicitado = (string) $request->input('mes', now()->format('Y-m'));
+        $mes = preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $mesSolicitado)
+            ? CarbonImmutable::createFromFormat('Y-m-d', $mesSolicitado.'-01')->startOfMonth()
+            : CarbonImmutable::now()->startOfMonth();
         $citas = CitaEloquentModel::with(['cliente:id,razon_social', 'vehiculo:id,placa,marca,modelo', 'servicio:id,nombre', 'mecanico:id,nombres,apellidos'])
             ->visiblePara($request->user())->when(in_array($estado, ['pendiente', 'confirmada', 'reprogramada', 'atendida', 'cancelada'], true), fn ($q) => $q->where('estado', $estado))
             ->orderByDesc('inicio')->paginate(15)->withQueryString();
         $citas->through(fn ($c) => $this->toArray($c));
-        return Inertia::render('Cita/index', ['citas' => $citas, 'estado' => $estado]);
+        $citasCalendario = CitaEloquentModel::with(['cliente:id,razon_social', 'vehiculo:id,placa,marca,modelo', 'servicio:id,nombre', 'mecanico:id,nombres,apellidos'])
+            ->visiblePara($request->user())
+            ->whereBetween('inicio', [$mes, $mes->endOfMonth()])
+            ->orderBy('inicio')
+            ->get()
+            ->map(fn ($c) => $this->toArray($c));
+
+        return Inertia::render('Cita/index', [
+            'citas' => $citas,
+            'citasCalendario' => $citasCalendario,
+            'estado' => $estado,
+            'mes' => $mes->format('Y-m'),
+            'vista' => $request->input('vista', 'lista'),
+        ]);
     }
 
     public function create(Request $request): Response

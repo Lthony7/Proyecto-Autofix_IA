@@ -30,6 +30,9 @@ export interface SharedPageProps {
     info?: string
     warning?: string
   }
+  navigation?: {
+    ordenesActivas: number | null
+  }
 }
 
 export interface Mail {

@@ -1,18 +1,20 @@
 <script setup lang="ts">
-import { reactive, ref, computed } from 'vue'
+import { reactive, ref, computed, watch } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import { route } from 'ziggy-js'
 import FormField from '../../components/FormField.vue'
+import { ayudaDocumento, documentoNumerico, longitudDocumento, normalizarDocumento, normalizarTelefono, tiposDocumentoColombia } from '../../utils/validation'
 
 // Estado del formulario
 const state = reactive({
-  tipoDocumento: 'DNI',
+  tipoDocumento: 'CC',
   numeroDocumento: '',
   razonSocial: '',
   direccion: '',
   telefono: '',
   email: ''
 })
+watch(() => state.tipoDocumento, tipo => { state.numeroDocumento = normalizarDocumento(state.numeroDocumento, tipo) })
 
 // Obtener errores de validación del backend
 const page = usePage()
@@ -70,25 +72,25 @@ const handleCancel = () => {
               <FormField label="Tipo de Documento" name="tipoDocumento" required :error="errors.tipoDocumento">
                 <USelect
                   v-model="state.tipoDocumento"
-                  :items="[
-                    { label: 'DNI', value: 'DNI' },
-                    { label: 'RUC', value: 'RUC' },
-                    { label: 'CE', value: 'CE' },
-                    { label: 'PASAPORTE', value: 'PASAPORTE' }
-                  ]"
+                  :items="tiposDocumentoColombia"
                   placeholder="Seleccione tipo de documento"
                   size="xl"
                   class="w-full"
                 />
               </FormField>
 
-              <FormField label="Número de Documento" name="numeroDocumento" required :error="errors.numeroDocumento">
+              <FormField label="Número de Documento" name="numeroDocumento" required :error="errors.numeroDocumento" :hint="ayudaDocumento(state.tipoDocumento)">
                 <UInput
                   v-model="state.numeroDocumento"
                   placeholder="Ingrese el número de documento"
                   icon="i-lucide-credit-card"
+                  :inputmode="documentoNumerico(state.tipoDocumento) ? 'numeric' : 'text'"
+                  :maxlength="longitudDocumento(state.tipoDocumento)"
+                  autocomplete="off"
+                  required
                   size="xl"
                   class="w-full"
+                  @update:model-value="state.numeroDocumento = normalizarDocumento(String($event), state.tipoDocumento)"
                 />
               </FormField>
             </div>
@@ -102,6 +104,7 @@ const handleCancel = () => {
                   icon="i-lucide-building"
                   size="xl"
                   class="w-full"
+                  required
                 />
               </FormField>
 
@@ -112,6 +115,7 @@ const handleCancel = () => {
                   icon="i-lucide-map-pin"
                   size="xl"
                   class="w-full"
+                  required
                 />
               </FormField>
             </div>
@@ -121,10 +125,16 @@ const handleCancel = () => {
               <FormField label="Teléfono" name="telefono" required :error="errors.telefono">
                 <UInput
                   v-model="state.telefono"
-                  placeholder="Ingrese el teléfono"
+                  type="tel"
+                  inputmode="tel"
+                  autocomplete="tel"
+                  maxlength="13"
+                  placeholder="3001234567"
                   icon="i-lucide-phone"
+                  required
                   size="xl"
                   class="w-full"
+                  @update:model-value="state.telefono = normalizarTelefono(String($event))"
                 />
               </FormField>
 
@@ -132,6 +142,9 @@ const handleCancel = () => {
                 <UInput
                   v-model="state.email"
                   type="email"
+                  autocomplete="email"
+                  maxlength="254"
+                  required
                   placeholder="cliente@ejemplo.com"
                   icon="i-lucide-mail"
                   size="xl"

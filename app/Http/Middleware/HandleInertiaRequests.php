@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use Src\OrdenTrabajo\Infrastructure\Models\OrdenTrabajoEloquentModel;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -49,6 +50,14 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),
+            ],
+            'navigation' => fn () => [
+                'ordenesActivas' => $request->user()?->can('ordenes.ver')
+                    ? OrdenTrabajoEloquentModel::query()
+                        ->visiblePara($request->user())
+                        ->whereIn('estado', ['pendiente', 'en_diagnostico', 'en_reparacion', 'finalizada'])
+                        ->count()
+                    : null,
             ],
             'ziggy' => fn () => [
                 ...\Illuminate\Support\Facades\Route::current() ? (new \Tighten\Ziggy\Ziggy)->toArray() : [],

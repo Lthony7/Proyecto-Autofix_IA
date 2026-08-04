@@ -2,6 +2,8 @@
 
 namespace Src\Cliente\Infrastructure\Requests;
 
+use App\Rules\DocumentoColombiano;
+use App\Rules\TelefonoColombiano;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -14,12 +16,14 @@ class UpdateClienteRequest extends FormRequest
 
     protected function prepareForValidation()
     {
+        $tipo = mb_strtoupper(trim((string) $this->input('tipoDocumento')));
+        $telefono = trim((string) $this->input('telefono'));
         $this->merge([
-            'tipo_documento' => mb_strtoupper(trim((string) $this->input('tipoDocumento'))),
-            'numero_documento' => mb_strtoupper(preg_replace('/[\s.-]+/', '', (string) $this->input('numeroDocumento'))),
+            'tipo_documento' => $tipo,
+            'numero_documento' => mb_strtoupper(preg_replace($tipo === 'PASAPORTE' ? '/[^A-Z0-9]/i' : '/\D/', '', (string) $this->input('numeroDocumento'))),
             'razon_social' => trim((string) $this->input('razonSocial')),
             'direccion' => trim((string) $this->input('direccion')),
-            'telefono' => trim((string) $this->input('telefono')),
+            'telefono' => str_starts_with($telefono, '+') ? '+'.preg_replace('/\D/', '', $telefono) : preg_replace('/\D/', '', $telefono),
             'email' => mb_strtolower(trim((string) $this->input('email'))),
         ]);
     }
@@ -30,12 +34,12 @@ class UpdateClienteRequest extends FormRequest
         $clienteId = $this->route('id') ?? $this->route('cliente');
 
         return [
-            'tipo_documento' => ['required', Rule::in(['DNI', 'RUC', 'CE', 'PASAPORTE'])],
-            'numero_documento' => ['required', 'string', 'max:30', Rule::unique('clientes', 'numero_documento')->ignore($clienteId)],
+            'tipo_documento' => ['required', Rule::in(['CC', 'CE', 'NIT', 'PASAPORTE'])],
+            'numero_documento' => ['required', 'string', new DocumentoColombiano((string) $this->input('tipo_documento')), Rule::unique('clientes', 'numero_documento')->ignore($clienteId)],
             'razon_social' => 'required|string|max:255',
             'direccion' => 'required|string|max:255',
-            'telefono' => 'required|string|max:30',
-            'email' => ['required', 'email:rfc', 'max:255', Rule::unique('clientes', 'email')->ignore($clienteId)],
+            'telefono' => ['required', 'string', 'max:13', new TelefonoColombiano],
+            'email' => ['required', 'email:rfc', 'max:254', Rule::unique('clientes', 'email')->ignore($clienteId)],
         ];
     }
 
@@ -54,13 +58,17 @@ class UpdateClienteRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'tipo_documento.in' => 'El tipo de documento debe ser DNI, RUC, CE o PASAPORTE',
+            'tipo_documento.required' => 'El tipo de documento es obligatorio',
+            'tipo_documento.in' => 'Selecciona CC, CE, NIT o PASAPORTE como tipo de documento',
+            'numero_documento.required' => 'El número de documento es obligatorio',
             'numero_documento.unique' => 'Este número de documento ya está registrado',
             'razon_social.required' => 'La razón social es obligatoria',
             'direccion.required' => 'La dirección es obligatoria',
             'telefono.required' => 'El teléfono es obligatorio',
             'email.email' => 'El email debe ser válido',
-            'email.unique' => 'Este email ya está registrado'
+            'email.required' => 'El email es obligatorio',
+            'email.unique' => 'Este email ya está registrado',
+            'email.max' => 'El email no puede superar 254 caracteres',
         ];
     }
 }

@@ -26,12 +26,25 @@ class GuardarCitaRequest extends FormRequest
         return [
             'cliente_id' => ['required', 'uuid', Rule::exists('clientes', 'id')->where('estado', 'activo')],
             'vehiculo_id' => ['required', 'uuid', Rule::exists('vehiculos', 'id')->where('estado', 'activo')],
-            'especialidad_id' => ['nullable', 'required_without:servicio_id', 'uuid', Rule::exists('especialidades', 'id')->where('estado', 'activo')],
+            'especialidad_id' => ['required', 'uuid', Rule::exists('especialidades', 'id')->where('estado', 'activo')],
             'servicio_id' => ['nullable', 'uuid', Rule::exists('servicios_taller', 'id')->where('estado', 'activo')],
             'mecanico_id' => ['nullable', 'uuid', Rule::exists('mecanicos', 'id')->where('estado', 'activo')],
             'motivo' => ['required', 'string', 'min:10', 'max:3000'], 'kilometraje' => ['nullable', 'integer', 'min:0', 'max:9999999'],
             'inicio' => ['required', 'date', 'after:now'],
             'consulta_ia_id' => ['nullable', 'uuid', Rule::exists('consultas_ia', 'id')],
+        ];
+    }
+    public function messages(): array
+    {
+        return [
+            'cliente_id.required' => 'Selecciona el cliente de la cita.',
+            'vehiculo_id.required' => 'Selecciona el vehículo de la cita.',
+            'especialidad_id.required' => 'Selecciona la especialidad requerida.',
+            'motivo.required' => 'Describe los síntomas o el motivo de la cita.',
+            'motivo.min' => 'El motivo debe contener al menos 10 caracteres.',
+            'inicio.required' => 'Selecciona la fecha y la hora de la cita.',
+            'inicio.date' => 'La fecha y la hora de la cita no son válidas.',
+            'inicio.after' => 'La cita debe programarse para una fecha y hora futuras.',
         ];
     }
     public function after(): array

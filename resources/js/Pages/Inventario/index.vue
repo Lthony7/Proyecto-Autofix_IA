@@ -3,6 +3,7 @@ import { computed, reactive, ref } from 'vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import { route } from 'ziggy-js'
 import { usePermissions } from '../../composables/usePermissions'
+import { normalizarTelefono } from '../../utils/validation'
 
 interface Catalogo { id: string; nombre: string; estado: string }
 interface Proveedor extends Catalogo { documento: string }
@@ -108,11 +109,11 @@ function numero(valor: string, decimales = 2) { return Number(valor).toLocaleStr
               <div class="sm:col-span-2 text-right"><UButton type="submit" size="sm" color="neutral" label="Agregar categoría" /></div>
             </form>
             <form class="grid gap-3 sm:grid-cols-2" @submit.prevent="guardarProveedor">
-              <UFormField label="Documento" required><UInput v-model="proveedor.documento" class="w-full" /></UFormField>
-              <UFormField label="Proveedor" required><UInput v-model="proveedor.nombre" class="w-full" /></UFormField>
-              <UFormField label="Contacto"><UInput v-model="proveedor.contacto" class="w-full" /></UFormField>
-              <UFormField label="Teléfono"><UInput v-model="proveedor.telefono" class="w-full" /></UFormField>
-              <UFormField label="Correo"><UInput v-model="proveedor.email" type="email" class="w-full" /></UFormField>
+              <UFormField label="Documento o NIT" required :error="errors.documento"><UInput v-model="proveedor.documento" maxlength="40" required class="w-full" /></UFormField>
+              <UFormField label="Proveedor" required :error="errors.nombre"><UInput v-model="proveedor.nombre" maxlength="180" required class="w-full" /></UFormField>
+              <UFormField label="Contacto" hint="Opcional"><UInput v-model="proveedor.contacto" maxlength="120" class="w-full" /></UFormField>
+              <UFormField label="Teléfono" hint="Opcional. 10 dígitos o con prefijo +57." :error="errors.telefono"><UInput v-model="proveedor.telefono" type="tel" inputmode="tel" autocomplete="tel" maxlength="13" class="w-full" @update:model-value="proveedor.telefono = normalizarTelefono(String($event))" /></UFormField>
+              <UFormField label="Correo" hint="Opcional" :error="errors.email"><UInput v-model="proveedor.email" type="email" autocomplete="email" maxlength="254" class="w-full" /></UFormField>
               <div class="self-end text-right"><UButton type="submit" size="sm" color="neutral" label="Agregar proveedor" /></div>
             </form>
           </div>

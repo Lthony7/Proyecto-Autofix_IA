@@ -14,6 +14,7 @@ const page = usePage()
 const { can, canAny } = usePermissions()
 const expandedMenus = reactive(new Set<string>())
 const esCliente = computed(() => ((page.props.auth as any)?.user?.roles ?? []).includes('Cliente'))
+const ordenesActivas = computed(() => Number((page.props.navigation as any)?.ordenesActivas ?? 0))
 
 useFlash()
 
@@ -74,6 +75,7 @@ const links = computed(() => [[
     icon: 'i-lucide-clipboard-list',
     url: '/ordenes',
     active: page.url.startsWith('/ordenes'),
+    badge: ordenesActivas.value,
     onSelect: () => navigateTo('/ordenes')
   }] : []),
   ...(canAny(['ia.solicitar', 'ia.revisar']) ? [{
@@ -163,6 +165,26 @@ const links = computed(() => [[
   }] : [])
 ]])
 
+const menuSections = computed(() => {
+  const items = links.value[0]
+  const definitions = [
+    { id: 'principal', label: '', items: ['Inicio'] },
+    { id: 'maestros', label: 'Clientes y vehículos', items: ['Clientes', 'Vehículos', 'Mecánicos', 'Servicios del taller'] },
+    { id: 'operacion', label: 'Operación', items: ['Citas', 'Órdenes de trabajo', 'Asistente IA'] },
+    { id: 'cobro', label: 'Cobro', items: ['Facturación', 'Pagos'] },
+    { id: 'gestion', label: 'Gestión', items: ['Historial de servicios', 'Mi Historial de Servicios', 'Bitácora vehicular', 'Inventario', 'Reportes'] },
+    { id: 'administracion', label: 'Administración', items: ['Usuarios', 'Auditoría'] }
+  ]
+
+  return definitions.map(section => ({
+    ...section,
+    links: section.items.flatMap(label => {
+      const item = items.find(link => link.label === label)
+      return item ? [item] : []
+    })
+  })).filter(section => section.links.length)
+})
+
 watch(() => page.url, () => {
   for (const item of links.value[0]) if (item.children?.length && item.active) expandedMenus.add(item.label)
 }, { immediate: true })
@@ -183,8 +205,9 @@ const groups = computed(() => [{
         </div>
 
         <nav class="flex-1 space-y-1.5 overflow-y-auto px-3 py-4" aria-label="Navegación principal">
-          <p class="mb-3 px-3 font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-dimmed">Navegación</p>
-          <div v-for="item in links[0]" :key="item.label" class="relative">
+          <div v-for="section in menuSections" :key="section.id" class="mb-4 last:mb-0">
+            <p v-if="section.label" class="mb-1.5 px-3 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-dimmed">{{ section.label }}</p>
+            <div v-for="item in section.links" :key="item.label" class="relative">
             <button
               v-if="item.children?.length"
               type="button"
@@ -207,6 +230,7 @@ const groups = computed(() => [{
               <span v-if="item.active" class="absolute inset-y-2 left-0 w-0.5 rounded-full bg-primary shadow-[0_0_8px_var(--ui-primary)]"/>
               <span class="grid size-8 shrink-0 place-items-center rounded-lg border transition-colors duration-200" :class="item.active ? 'border-primary/15 bg-primary/12' : 'border-transparent bg-elevated group-hover:border-default group-hover:bg-default'"><UIcon :name="item.icon" class="size-[18px]" aria-hidden="true" /></span>
               <span class="flex-1">{{ item.label }}</span>
+              <span v-if="item.badge !== undefined" class="min-w-6 rounded-full bg-primary px-1.5 py-0.5 text-center font-mono text-[10px] font-bold leading-4 text-white shadow-sm shadow-primary/20">{{ item.badge }}</span>
             </Link>
             <Transition name="submenu">
               <div v-if="item.children?.length && expandedMenus.has(item.label)" class="submenu-tree relative ml-4 mt-1.5 space-y-1 pb-1 pl-7">
@@ -223,6 +247,7 @@ const groups = computed(() => [{
                 </Link>
               </div>
             </Transition>
+            </div>
           </div>
         </nav>
 
@@ -247,8 +272,9 @@ const groups = computed(() => [{
               <UButton icon="i-lucide-x" color="neutral" variant="ghost" aria-label="Cerrar menú" @click="open = false" />
             </div>
             <nav class="flex-1 space-y-1.5 overflow-y-auto px-3 py-4">
-              <p class="mb-3 px-3 font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-dimmed">Navegación</p>
-              <div v-for="item in links[0]" :key="item.label" class="relative">
+              <div v-for="section in menuSections" :key="section.id" class="mb-4 last:mb-0">
+                <p v-if="section.label" class="mb-1.5 px-3 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-dimmed">{{ section.label }}</p>
+                <div v-for="item in section.links" :key="item.label" class="relative">
                 <button
                   v-if="item.children?.length"
                   type="button"
@@ -269,15 +295,17 @@ const groups = computed(() => [{
                   @click="open = false"
                 >
                   <span v-if="item.active" class="absolute inset-y-2 left-0 w-0.5 rounded-full bg-primary"/>
-                  <span class="grid size-9 shrink-0 place-items-center rounded-lg border" :class="item.active ? 'border-primary/15 bg-primary/12' : 'border-transparent bg-elevated'"><UIcon :name="item.icon" class="size-5" aria-hidden="true" /></span>
-                  <span class="flex-1">{{ item.label }}</span>
-                </Link>
+                   <span class="grid size-9 shrink-0 place-items-center rounded-lg border" :class="item.active ? 'border-primary/15 bg-primary/12' : 'border-transparent bg-elevated'"><UIcon :name="item.icon" class="size-5" aria-hidden="true" /></span>
+                   <span class="flex-1">{{ item.label }}</span>
+                   <span v-if="item.badge !== undefined" class="min-w-6 rounded-full bg-primary px-1.5 py-0.5 text-center font-mono text-[10px] font-bold leading-4 text-white shadow-sm shadow-primary/20">{{ item.badge }}</span>
+                 </Link>
                 <Transition name="submenu">
                   <div v-if="item.children?.length && expandedMenus.has(item.label)" class="submenu-tree relative ml-5 mt-1.5 space-y-1 pb-1 pl-7">
                     <Link v-for="child in item.children" :key="child.url" :href="child.url" class="submenu-link group/child relative flex min-h-10 w-full items-center rounded-lg border border-transparent px-3 py-2 text-left text-sm font-medium transition-all duration-200" :class="page.url.startsWith(child.url)?'border-primary/15 bg-primary/10 text-primary shadow-sm':'text-muted hover:border-default hover:bg-elevated hover:text-highlighted'" @click="open=false"><span class="tree-branch" :class="page.url.startsWith(child.url)?'tree-branch-active':''" aria-hidden="true"/><span class="mr-2 grid size-7 shrink-0 place-items-center rounded-md border" :class="page.url.startsWith(child.url)?'border-primary/20 bg-primary/15 text-primary':'border-default bg-elevated text-dimmed'"><UIcon :name="child.icon" class="size-4" aria-hidden="true"/></span><span>{{ child.label }}</span></Link>
                   </div>
-                </Transition>
-              </div>
+                 </Transition>
+                </div>
+               </div>
             </nav>
             <div class="border-t border-default p-3"><UserMenu /></div>
           </div>

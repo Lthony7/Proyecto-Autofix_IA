@@ -35,8 +35,20 @@ class OrdenTrabajoWebController extends Controller
 {
     public function index(Request $request): Response
     {
+        $conteos = OrdenTrabajoEloquentModel::query()
+            ->visiblePara($request->user())
+            ->selectRaw('estado, COUNT(*) as total')
+            ->groupBy('estado')
+            ->pluck('total', 'estado');
+
+        $resumenEstados = [
+            'cerradas' => (int) ($conteos['finalizada'] ?? 0) + (int) ($conteos['entregada'] ?? 0),
+            'enCurso' => (int) ($conteos['en_diagnostico'] ?? 0) + (int) ($conteos['en_reparacion'] ?? 0),
+            'pendientes' => (int) ($conteos['pendiente'] ?? 0),
+        ];
+
         $estado=$request->input('estado'); $ordenes=OrdenTrabajoEloquentModel::with(['cliente:id,razon_social','vehiculo:id,placa,marca,modelo','asignaciones'=>fn($q)=>$q->where('activo',true)->with('mecanico:id,nombres,apellidos')])->visiblePara($request->user())->when($estado,fn($q)=>$q->where('estado',$estado))->latest('recibida_en')->paginate(15)->withQueryString();
-        $ordenes->through(fn($o)=>$this->resumen($o)); return Inertia::render('OrdenTrabajo/index',['ordenes'=>$ordenes,'estado'=>$estado]);
+        $ordenes->through(fn($o)=>$this->resumen($o)); return Inertia::render('OrdenTrabajo/index',['ordenes'=>$ordenes,'estado'=>$estado,'resumenEstados'=>$resumenEstados]);
     }
 
     public function create(): Response { return Inertia::render('OrdenTrabajo/form',$this->catalogos()); }
@@ -81,7 +93,7 @@ class OrdenTrabajoWebController extends Controller
     {
         $this->autorizarMecanicoAsignado($request,$orden);if(!in_array($orden->estado,['en_diagnostico','en_reparacion'],true))throw ValidationException::withMessages(['diagnostico'=>'La orden debe estar en diagnóstico o reparación.']);
         DB::transaction(function()use($request,$orden){$orden->diagnosticos()->where('vigente',true)->update(['vigente'=>false]);$version=((int)$orden->diagnosticos()->max('version'))+1;$mecanico=MecanicoEloquentModel::where('usuario_id',$request->user()->id)->value('id');DiagnosticoTecnicoEloquentModel::create(['orden_id'=>$orden->id,'mecanico_id'=>$mecanico,'version'=>$version,'diagnostico'=>$request->validated('diagnostico'),'pruebas_realizadas'=>$request->validated('pruebasRealizadas'),'recomendaciones'=>$request->validated('recomendaciones'),'vigente'=>true,'registrado_por'=>$request->user()->id]);});
-        $auditoria->registrar('diagnostico.registrado','orden_trabajo',$orden->id,[],$request);$historial->registrar($orden->vehiculo_id,'diagnostico.registrado',"Se registró un diagnóstico técnico en la orden {$orden->numero}.",['orden_id'=>$orden->id],$request);return back()->with('success','Diagnóstico técnico registrado.');
+        $auditoria->registrar('diagnostico.registrado','orden_trabajo',$orden->id,[],$request);$historial->registrar($orden->vehiculo_id,'diagnostico.registrado',"Se registró un diagnóstico técnico en la orden {$orden->numero}.",['orden_id'=>$orden->id],$request);return back()->with('success','Diagnóstico técnico registrado correctamente. Puedes continuar con la reparación y documentar los avances.');
     }
 
     public function cambiarEstadoServicio(Request$request,OrdenTrabajoEloquentModel$orden,OrdenServicioEloquentModel$servicio,RegistrarAuditoria$auditoria,RegistrarEventoVehiculo$historial):RedirectResponse

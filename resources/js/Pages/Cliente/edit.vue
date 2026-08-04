@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { reactive, ref, computed } from 'vue'
+import { reactive, ref, computed, watch } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import { route } from 'ziggy-js'
 import type { Cliente } from '../../types'
+import { ayudaDocumento, documentoNumerico, longitudDocumento, normalizarDocumento, normalizarTelefono, tiposDocumentoColombia } from '../../utils/validation'
 
 const props = defineProps<{
   cliente: Cliente
@@ -17,6 +18,7 @@ const state = reactive({
   telefono: props.cliente.telefono,
   email: props.cliente.email
 })
+watch(() => state.tipoDocumento, tipo => { state.numeroDocumento = normalizarDocumento(state.numeroDocumento, tipo) })
 
 // Obtener errores de validación del backend
 const page = usePage()
@@ -73,25 +75,25 @@ const handleCancel = () => {
               <UFormField label="Tipo de Documento" name="tipoDocumento" required :error="errors.tipoDocumento" size="xl" class="w-full">
                 <USelect
                   v-model="state.tipoDocumento"
-                  :items="[
-                    { label: 'DNI', value: 'DNI' },
-                    { label: 'RUC', value: 'RUC' },
-                    { label: 'CE', value: 'CE' },
-                    { label: 'PASAPORTE', value: 'PASAPORTE' }
-                  ]"
+                  :items="tiposDocumentoColombia"
                   placeholder="Seleccione tipo de documento"
                   size="xl"
                   class="w-full"
                 />
               </UFormField>
 
-              <UFormField label="Número de Documento" name="numeroDocumento" required :error="errors.numeroDocumento" size="xl" class="w-full">
+              <UFormField label="Número de Documento" name="numeroDocumento" required :error="errors.numeroDocumento" :hint="ayudaDocumento(state.tipoDocumento)" size="xl" class="w-full">
                 <UInput
                   v-model="state.numeroDocumento"
                   placeholder="Ingrese el número de documento"
                   icon="i-lucide-credit-card"
+                  :inputmode="documentoNumerico(state.tipoDocumento) ? 'numeric' : 'text'"
+                  :maxlength="longitudDocumento(state.tipoDocumento)"
+                  autocomplete="off"
+                  required
                   size="xl"
                   class="w-full"
+                  @update:model-value="state.numeroDocumento = normalizarDocumento(String($event), state.tipoDocumento)"
                 />
               </UFormField>
             </div>
@@ -105,6 +107,7 @@ const handleCancel = () => {
                   icon="i-lucide-building"
                   size="xl"
                   class="w-full"
+                  required
                 />
               </UFormField>
 
@@ -115,6 +118,7 @@ const handleCancel = () => {
                   icon="i-lucide-map-pin"
                   size="xl"
                   class="w-full"
+                  required
                 />
               </UFormField>
             </div>
@@ -124,10 +128,16 @@ const handleCancel = () => {
               <UFormField label="Teléfono" name="telefono" required :error="errors.telefono" size="xl" class="w-full">
                 <UInput
                   v-model="state.telefono"
-                  placeholder="Ingrese el teléfono"
+                  type="tel"
+                  inputmode="tel"
+                  autocomplete="tel"
+                  maxlength="13"
+                  placeholder="3001234567"
                   icon="i-lucide-phone"
+                  required
                   size="xl"
                   class="w-full"
+                  @update:model-value="state.telefono = normalizarTelefono(String($event))"
                 />
               </UFormField>
 
@@ -135,6 +145,9 @@ const handleCancel = () => {
                 <UInput
                   v-model="state.email"
                   type="email"
+                  autocomplete="email"
+                  maxlength="254"
+                  required
                   placeholder="cliente@ejemplo.com"
                   icon="i-lucide-mail"
                   size="xl"
