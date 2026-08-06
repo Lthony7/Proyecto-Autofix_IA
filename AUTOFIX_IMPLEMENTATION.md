@@ -97,14 +97,18 @@ La integración se configura mediante `GROQ_ENABLED`, `GROQ_API_KEY`, `GROQ_API_
 - Duración calculada en el backend desde el servicio seleccionado.
 - Validación de disponibilidad semanal y vigencia del horario del mecánico.
 - El formulario ofrece durante 90 días únicamente fechas laborales con cupos y horas libres en intervalos de 30 minutos, según la duración del servicio y las citas no canceladas.
+- La cita es gratuita y no crea facturas ni pagos. El servicio seleccionado y los repuestos opcionales son solicitudes sujetas a diagnóstico, disponibilidad y confirmación técnica.
+- Solicitar o recomendar un repuesto no reserva ni descuenta existencias; solo el uso confirmado por el mecánico crea una salida trazable de inventario.
 - Prevención de solapamientos dentro de una transacción con bloqueo asesor de PostgreSQL.
 - Cancelaciones con motivo, responsable y fecha, sin eliminación física.
 - Formularios y agenda responsivos mediante Inertia y Nuxt UI.
 
 ### Fase 5: órdenes y diagnóstico técnico
 
-- Órdenes creadas desde recepción o convertidas una única vez desde citas atendidas.
+- Cada cita crea transaccionalmente una orden pendiente con su servicio y mecánico asignado; las citas históricas se recuperan de forma idempotente.
 - Servicios de la orden conservan nombre y precio acordado como instantánea histórica.
+- La orden reúne la agenda completa, entrada y recomendaciones IA, diagnóstico humano, servicios requeridos, trabajo realizado y repuestos solicitados, sugeridos, requeridos y utilizados.
+- El mecánico prepara el alcance técnico y documenta el trabajo; Recepción o Administración emite la factura definitiva después de finalizar y registra el pago contra esa factura.
 - Asignaciones de mecánicos trazables; las anteriores se retiran sin eliminarse.
 - Estados controlados: pendiente, en diagnóstico, en reparación, finalizada, entregada y cancelada.
 - Historial inmutable de cada transición, usuario, fecha y observaciones.
@@ -282,7 +286,7 @@ Verificación manual:
 - El mecánico asignado a la cita o a la orden puede revisar la consulta; una sugerencia inicial deja de conceder acceso cuando existe una asignación operativa distinta.
 - Una orden no puede entrar en reparación, completar servicios ni consumir repuestos sin diagnóstico técnico humano vigente; si tiene IA vinculada, esta debe estar confirmada o modificada.
 - Las citas se interpretan en `America/Bogota`, validan disponibilidad nuevamente al confirmar y no pueden marcarse atendidas antes de comenzar o sin mecánico.
-- Las citas atendidas ofrecen la acción idempotente `Crear orden`; los reintentos abren la orden existente sin duplicar auditoría ni historial.
+- La orden existe desde que se agenda la cita y aparece de inmediato al mecánico asignado; cualquier reintento abre la misma orden sin duplicarla.
 - Después de entregar el vehículo no se permite anular o reembolsar pagos ni anular la factura, conservando el cierre financiero verificado.
 - Inventario presenta conteos reales de referencias normales, bajas y agotadas, además de movimientos con saldo anterior y resultante.
 - Los movimientos solo exponen responsable a gestores; una orden asociada solo se muestra a usuarios que pueden consultarla.
@@ -296,6 +300,6 @@ Verificación manual:
 
 1. Generar un diagnóstico con Groq deshabilitado y confirmar que el fallback muestre riesgo, circulación y advertencia.
 2. Modificar y descartar diagnósticos con un mecánico; comprobar que la respuesta original permanezca intacta y el descarte exija motivo.
-3. Agendar una cita desde IA, abrirla en el calendario y convertirla una sola vez en orden cuando esté atendida.
+3. Agendar una cita desde IA, solicitar opcionalmente un repuesto y verificar que la orden aparezca inmediatamente al mecánico sin factura ni movimiento de inventario.
 4. Abrir la orden y confirmar que muestre la respuesta humana vigente y no una corrección interna obsoleta.
 5. Registrar entradas y salidas de inventario y revisar tarjetas, saldos y visibilidad de la orden asociada según el rol.

@@ -19,8 +19,8 @@ class CitaEloquentModel extends Model
 {
     use HasUuids;
     protected $table = 'citas';
-    protected $fillable = ['numero', 'cliente_id', 'vehiculo_id', 'especialidad_id', 'servicio_id', 'mecanico_id', 'motivo', 'kilometraje', 'inicio', 'fin', 'estado', 'motivo_cancelacion', 'cancelada_en', 'cancelada_por', 'creado_por', 'actualizado_por'];
-    protected function casts(): array { return ['inicio' => 'immutable_datetime', 'fin' => 'immutable_datetime', 'cancelada_en' => 'immutable_datetime']; }
+    protected $fillable = ['numero', 'cliente_id', 'vehiculo_id', 'especialidad_id', 'servicio_id', 'mecanico_id', 'motivo', 'kilometraje', 'inicio', 'fin', 'estado', 'atendida_en', 'atendida_por', 'motivo_cancelacion', 'cancelada_en', 'cancelada_por', 'creado_por', 'actualizado_por'];
+    protected function casts(): array { return ['inicio' => 'immutable_datetime', 'fin' => 'immutable_datetime', 'atendida_en' => 'immutable_datetime', 'cancelada_en' => 'immutable_datetime']; }
     public function cliente(): BelongsTo { return $this->belongsTo(ClienteEloquentModel::class, 'cliente_id'); }
     public function vehiculo(): BelongsTo { return $this->belongsTo(VehiculoEloquentModel::class, 'vehiculo_id'); }
     public function especialidad(): BelongsTo { return $this->belongsTo(EspecialidadEloquentModel::class, 'especialidad_id'); }
@@ -28,11 +28,12 @@ class CitaEloquentModel extends Model
     public function mecanico(): BelongsTo { return $this->belongsTo(MecanicoEloquentModel::class, 'mecanico_id'); }
     public function historial(): HasMany { return $this->hasMany(CitaEstadoHistorialEloquentModel::class, 'cita_id'); }
     public function orden(): HasOne { return $this->hasOne(\Src\OrdenTrabajo\Infrastructure\Models\OrdenTrabajoEloquentModel::class, 'cita_id'); }
+    public function repuestosSolicitados(): HasMany { return $this->hasMany(CitaRepuestoSolicitadoEloquentModel::class, 'cita_id'); }
 
     public function scopeVisiblePara(Builder $query, UserEloquentModel $usuario): Builder
     {
         if ($usuario->hasRole('Cliente')) return $query->whereHas('cliente', fn (Builder $q) => $q->where('usuario_id', $usuario->id));
-        if ($usuario->hasRole('Mecánico')) return $query->whereHas('mecanico', fn (Builder $q) => $q->where('usuario_id', $usuario->id));
+        if ($usuario->hasRole('Mecánico')) return $query->whereHas('mecanico', fn (Builder $q) => $q->where('usuario_id', $usuario->id)->orWhere(fn (Builder $correo) => $correo->whereNull('usuario_id')->whereRaw('LOWER(email) = ?', [mb_strtolower($usuario->email)])));
         return $query;
     }
 }

@@ -35,19 +35,19 @@ class SolicitarDiagnosticoIaRequest extends FormRequest
             'vehiculo_id' => ['required', 'uuid', Rule::exists('vehiculos', 'id')->where('estado', 'activo')],
             'kilometraje' => ['required', 'integer', 'min:0', 'max:9999999'],
             'categoria_falla' => ['required', Rule::in(['frenos', 'motor', 'electrico', 'suspension', 'transmision', 'climatizacion', 'otro'])],
-            'sintoma_principal' => ['required', 'string', 'min:10', 'max:1500'],
-            'momento_ocurre' => ['required', 'string', 'max:500'],
+            'sintoma_principal' => ['required', 'string'],
+            'momento_ocurre' => ['required', 'string'],
             'frecuencia' => ['required', Rule::in(['primera_vez', 'ocasional', 'intermitente', 'frecuente', 'permanente'])],
-            'tiempo_desde_inicio' => ['required', 'string', 'max:200'],
+            'tiempo_desde_inicio' => ['required', 'string'],
             'intensidad' => ['required', Rule::in(['leve', 'moderada', 'severa'])],
             'condiciones' => ['array', 'max:8'],
             'condiciones.*' => [Rule::in(['frio', 'caliente', 'detenido', 'movimiento', 'acelerar', 'frenar', 'girar', 'subida', 'carretera', 'ciudad', 'lluvia'])],
-            'senales' => ['nullable', 'string', 'max:1000'], 'luces_tablero' => ['nullable', 'string', 'max:500'],
-            'perdida_potencia_arranque' => ['nullable', 'string', 'max:500'], 'codigos_obd' => ['nullable', 'string', 'max:500'],
-            'pruebas_realizadas' => ['nullable', 'string', 'max:1200'],
+            'senales' => ['nullable', 'string'], 'luces_tablero' => ['nullable', 'string'],
+            'perdida_potencia_arranque' => ['nullable', 'string'], 'codigos_obd' => ['nullable', 'string', 'max:500'],
+            'pruebas_realizadas' => ['nullable', 'string'],
             'puede_circular' => ['required', Rule::in(['si', 'con_dificultad', 'no'])],
             'urgencia_percibida' => ['required', Rule::in(['baja', 'media', 'alta', 'critica'])],
-            'reparaciones_recientes' => ['nullable', 'string', 'max:1000'], 'observaciones' => ['nullable', 'string', 'max:1500'],
+            'reparaciones_recientes' => ['nullable', 'string'], 'observaciones' => ['nullable', 'string'],
         ];
     }
 
@@ -75,7 +75,6 @@ class SolicitarDiagnosticoIaRequest extends FormRequest
             'categoria_falla.in' => 'Selecciona un tipo de falla válido.',
             'frecuencia.in' => 'Selecciona una frecuencia válida.',
             'intensidad.required' => 'Selecciona la intensidad percibida.',
-            'sintoma_principal.min' => 'Describe el síntoma con al menos 10 caracteres.',
         ];
     }
 }

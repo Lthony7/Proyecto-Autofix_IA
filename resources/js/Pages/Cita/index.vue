@@ -123,4 +123,5 @@ function colorEstado(estado: string): 'error'|'success'|'warning'|'primary'|'neu
     </template>
     <template #footer><div class="flex justify-end gap-2"><UButton label="Cerrar" color="neutral" variant="outline" @click="modal = false" /><UButton :label="accion === 'cancelada' ? 'Cancelar cita' : 'Guardar cambio'" :color="accion === 'cancelada' ? 'error' : 'primary'" @click="guardarModal" /></div></template>
   </UModal>
+
 </template>

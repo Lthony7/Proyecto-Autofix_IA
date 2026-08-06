@@ -1,139 +1,125 @@
 <script setup lang="ts">
-import { reactive, computed, ref } from 'vue'
-import { router, usePage } from '@inertiajs/vue3'
+import { computed, reactive, ref, watch } from 'vue'
+import { Head, router, usePage } from '@inertiajs/vue3'
 import { route } from 'ziggy-js'
+import AutofixLogo from '../../components/AutofixLogo.vue'
 import FormField from '../../components/FormField.vue'
+import { ayudaDocumento, documentoNumerico, longitudDocumento, normalizarDocumento, normalizarTelefono, tiposDocumentoColombia } from '../../utils/validation'
 
-// Definir que esta página no usa layout
-defineOptions({
-  layout: null
-})
+defineOptions({ layout: null })
 
-// Estado del formulario
 const state = reactive({
-  name: '',
+  tipoDocumento: 'CC',
+  numeroDocumento: '',
+  razonSocial: '',
+  direccion: '',
+  telefono: '',
   email: '',
   password: '',
   password_confirmation: ''
 })
 
-// Obtener errores de validación del backend
 const page = usePage()
-const backendErrors = computed(() => page.props.errors || {})
-
-// Convertir errores de array a string (Laravel retorna arrays)
-const errors = computed(() => {
-  const result: Record<string, string> = {}
-  Object.keys(backendErrors.value).forEach(key => {
-    const error = backendErrors.value[key]
-    result[key] = Array.isArray(error) ? error[0] : error
-  })
-  return result
-})
-
-// Loading state
+const errors = computed<Record<string, string>>(() => page.props.errors as Record<string, string>)
 const isLoading = ref(false)
 
-// Submit handler
-const handleSubmit = () => {
-  isLoading.value = true
+watch(() => state.tipoDocumento, tipo => {
+  state.numeroDocumento = normalizarDocumento(state.numeroDocumento, tipo)
+})
 
-  router.post(route('register'), state, {
-    onFinish: () => {
-      isLoading.value = false
-    },
-    onError: (errors) => {
-      console.error('Errores de validación:', errors)
-    }
-  })
+function handleSubmit() {
+  isLoading.value = true
+  router.post(route('register'), state, { onFinish: () => { isLoading.value = false } })
 }
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-background p-4">
-    <div class="w-full max-w-md">
+  <Head title="Crear cuenta" />
+  <main class="min-h-screen bg-background px-4 py-8 sm:py-12">
+    <div class="mx-auto w-full max-w-3xl">
+      <div class="mb-6 flex items-center justify-center gap-3">
+        <AutofixLogo class="h-16 w-20 shrink-0" />
+        <div>
+          <p class="text-2xl font-bold">AUTOFIX</p>
+          <p class="text-sm text-muted">Tu cuenta para gestionar vehículos y citas</p>
+        </div>
+      </div>
+
       <UCard>
         <template #header>
-          <div class="flex items-center gap-3 mb-2">
-            <div class="flex items-center justify-center w-12 h-12 rounded-full bg-primary-100 dark:bg-primary-900">
-              <UIcon name="i-lucide-user-plus" class="size-5 text-primary-600 dark:text-primary-400" />
-            </div>
-            <div>
-              <h2 class="text-2xl font-bold">Crear Cuenta</h2>
-              <p class="text-sm text-muted">Completa el formulario para registrarte en el sistema</p>
-            </div>
+          <div>
+            <h1 class="text-xl font-bold">Crear cuenta de cliente</h1>
+            <p class="mt-1 text-sm text-muted">Registra tus datos. La cuenta se crea únicamente con permisos de Cliente.</p>
           </div>
         </template>
 
-        <form @submit.prevent="handleSubmit" class="space-y-4">
-          <FormField label="Nombre completo" name="name" required :error="errors.name">
+        <form class="grid gap-5 md:grid-cols-2" @submit.prevent="handleSubmit">
+          <FormField label="Tipo de documento" name="tipoDocumento" required :error="errors.tipoDocumento">
+            <USelect v-model="state.tipoDocumento" :items="tiposDocumentoColombia" class="w-full" size="xl" />
+          </FormField>
+
+          <FormField label="Número de documento" name="numeroDocumento" required :error="errors.numeroDocumento" :hint="ayudaDocumento(state.tipoDocumento)">
             <UInput
-              v-model="state.name"
-              type="text"
-              placeholder="Juan Pérez"
-              icon="i-lucide-user"
-              size="xl"
+              v-model="state.numeroDocumento"
+              :inputmode="documentoNumerico(state.tipoDocumento) ? 'numeric' : 'text'"
+              :maxlength="longitudDocumento(state.tipoDocumento)"
+              autocomplete="off"
               class="w-full"
+              icon="i-lucide-id-card"
+              size="xl"
+              required
+              @update:model-value="state.numeroDocumento = normalizarDocumento(String($event), state.tipoDocumento)"
             />
           </FormField>
 
-          <FormField label="Correo electrónico" name="email" required :error="errors.email">
+          <FormField class="md:col-span-2" label="Nombre completo o razón social" name="razonSocial" required :error="errors.razonSocial">
+            <UInput v-model="state.razonSocial" autocomplete="name" class="w-full" icon="i-lucide-user" size="xl" required />
+          </FormField>
+
+          <FormField label="Teléfono" name="telefono" required :error="errors.telefono" hint="Número colombiano de 10 dígitos o con prefijo +57.">
             <UInput
-              v-model="state.email"
-              type="email"
-              placeholder="tu@email.com"
-              icon="i-lucide-mail"
-              size="xl"
+              v-model="state.telefono"
+              type="tel"
+              inputmode="tel"
+              autocomplete="tel"
+              maxlength="13"
               class="w-full"
+              icon="i-lucide-phone"
+              size="xl"
+              required
+              @update:model-value="state.telefono = normalizarTelefono(String($event))"
             />
           </FormField>
 
-          <FormField label="Contraseña" name="password" required :error="errors.password">
-            <UInput
-              v-model="state.password"
-              type="password"
-              placeholder="••••••••"
-              icon="i-lucide-lock"
-              size="xl"
-              class="w-full"
-            />
+          <FormField label="Dirección" name="direccion" required :error="errors.direccion">
+            <UInput v-model="state.direccion" autocomplete="street-address" class="w-full" icon="i-lucide-map-pin" size="xl" required />
           </FormField>
 
-          <FormField label="Confirmar contraseña" name="password_confirmation" required :error="errors.password_confirmation">
-            <UInput
-              v-model="state.password_confirmation"
-              type="password"
-              placeholder="••••••••"
-              icon="i-lucide-lock"
-              size="xl"
-              class="w-full"
-            />
+          <FormField class="md:col-span-2" label="Correo electrónico" name="email" required :error="errors.email">
+            <UInput v-model="state.email" type="email" autocomplete="email" maxlength="254" class="w-full" icon="i-lucide-mail" size="xl" required />
           </FormField>
 
-          <UButton
-            type="submit"
-            color="primary"
-            label="Registrarse"
-            :loading="isLoading"
-            block
-            size="xl"
-          />
+          <FormField label="Contraseña" name="password" required :error="errors.password" hint="Mínimo 8 caracteres, con mayúsculas, minúsculas y números.">
+            <UInput v-model="state.password" type="password" autocomplete="new-password" class="w-full" icon="i-lucide-lock" size="xl" required />
+          </FormField>
+
+          <FormField label="Confirmar contraseña" name="password_confirmation" required :error="errors.passwordConfirmation">
+            <UInput v-model="state.password_confirmation" type="password" autocomplete="new-password" class="w-full" icon="i-lucide-lock-keyhole" size="xl" required />
+          </FormField>
+
+          <div class="md:col-span-2">
+            <UAlert color="neutral" variant="subtle" icon="i-lucide-shield-check" title="Registro exclusivo para clientes" description="Los roles de Administrador, Mecánico y Recepcionista solo pueden ser asignados por un administrador." />
+          </div>
+
+          <div class="flex flex-col-reverse gap-3 md:col-span-2 sm:flex-row sm:items-center sm:justify-between">
+            <p class="text-center text-sm text-muted sm:text-left">
+              ¿Ya tienes cuenta?
+              <UButton :to="route('login')" variant="link" label="Inicia sesión" :padded="false" />
+            </p>
+            <UButton type="submit" label="Crear mi cuenta" icon="i-lucide-user-plus" size="xl" :loading="isLoading" />
+          </div>
         </form>
-
-        <template #footer>
-          <div class="text-center text-sm">
-            <span class="text-muted">¿Ya tienes una cuenta?</span>
-            <UButton
-              :to="route('login')"
-              variant="link"
-              color="primary"
-              label="Inicia sesión"
-              :padded="false"
-              class="ml-1"
-            />
-          </div>
-        </template>
       </UCard>
     </div>
-  </div>
+  </main>
 </template>

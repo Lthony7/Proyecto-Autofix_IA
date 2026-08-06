@@ -11,6 +11,6 @@ class GuardarEspecialidadRequest extends FormRequest
     protected function prepareForValidation(): void { $this->merge(['codigo' => mb_strtoupper(trim((string) $this->input('codigo'))), 'nombre' => trim((string) $this->input('nombre'))]); }
     public function rules(): array
     {
-        return ['codigo' => ['required', 'max:30', Rule::unique('especialidades')], 'nombre' => ['required', 'max:120', Rule::unique('especialidades')], 'descripcion' => ['nullable', 'string', 'max:2000']];
+        return ['codigo' => ['required', 'max:30', Rule::unique('especialidades')], 'nombre' => ['required', 'max:120', Rule::unique('especialidades')], 'descripcion' => ['nullable', 'string']];
     }
 }

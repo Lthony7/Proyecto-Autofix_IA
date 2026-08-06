@@ -101,9 +101,10 @@ const handleSubmit = () => {
         </form>
 
         <template #footer>
-          <p class="text-center text-sm text-muted">
-            Las cuentas son administradas por personal autorizado.
-          </p>
+          <div class="space-y-2 text-center text-sm">
+            <p class="text-muted">¿Eres cliente y todavía no tienes cuenta?</p>
+            <UButton :to="route('register')" variant="link" color="primary" label="Crear cuenta de cliente" :padded="false" />
+          </div>
         </template>
       </UCard>
     </div>

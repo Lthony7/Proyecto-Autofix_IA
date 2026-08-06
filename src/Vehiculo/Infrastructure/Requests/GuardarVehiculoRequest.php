@@ -44,7 +44,7 @@ class GuardarVehiculoRequest extends FormRequest
             'color' => ['nullable', 'string', 'max:50'],
             'kilometraje' => ['required', 'integer', 'min:0', 'max:9999999'],
             'combustible' => ['required', Rule::in(['gasolina', 'diesel', 'gas', 'hibrido', 'electrico'])],
-            'observaciones' => ['nullable', 'string', 'max:2000'],
+            'observaciones' => ['nullable', 'string'],
         ];
     }
 }

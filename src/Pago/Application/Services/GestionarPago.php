@@ -21,6 +21,9 @@ class GestionarPago
             if ($bloqueada->estado === 'cancelada') {
                 throw ValidationException::withMessages(['orden' => 'No se pueden registrar pagos en una orden cancelada.']);
             }
+            if (! DB::table('facturas_orden')->where('orden_id', $bloqueada->id)->where('estado', 'emitida')->exists()) {
+                throw ValidationException::withMessages(['orden' => 'Emite la factura definitiva antes de registrar el pago.']);
+            }
 
             $resumen = $this->calculador->calcular($bloqueada->id);
             $monto = BigDecimal::of((string) $datos['monto'])->toScale(2, RoundingMode::HALF_UP);

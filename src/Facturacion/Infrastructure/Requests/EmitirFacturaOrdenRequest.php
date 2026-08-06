@@ -25,10 +25,10 @@ class EmitirFacturaOrdenRequest extends FormRequest
     {
         return [
             'descuento' => ['required', 'decimal:0,2', 'min:0'],
-            'motivo_descuento' => ['nullable', 'string', 'min:5', 'max:500'],
+            'motivo_descuento' => ['nullable', 'string'],
             'tasa_impuesto' => ['required', 'decimal:0,2', 'between:0,100'],
             'vence_en' => ['nullable', 'date', 'after_or_equal:today'],
-            'observaciones' => ['nullable', 'string', 'max:2000'],
+            'observaciones' => ['nullable', 'string'],
         ];
     }
 

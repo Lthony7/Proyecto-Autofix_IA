@@ -13,6 +13,6 @@ class ReembolsarPagoRequest extends FormRequest
 
     public function rules(): array
     {
-        return ['motivo' => ['required', 'string', 'min:10', 'max:1000']];
+        return ['motivo' => ['required', 'string']];
     }
 }

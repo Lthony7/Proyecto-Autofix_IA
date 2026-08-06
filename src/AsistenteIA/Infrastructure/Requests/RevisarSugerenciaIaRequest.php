@@ -14,15 +14,15 @@ class RevisarSugerenciaIaRequest extends FormRequest
         return [
             'estado' => ['required', Rule::in(['en_revision', 'confirmada', 'modificada', 'descartada'])],
             'coincideIa' => ['required_unless:estado,en_revision,descartada', 'nullable', 'boolean'],
-            'observacionesCliente' => ['required_if:estado,confirmada,modificada', 'nullable', 'string', 'min:10', 'max:3000'],
-            'notasInternas' => ['nullable', 'string', 'max:3000'],
-            'motivoDiferencia' => ['required_if:estado,modificada,descartada', 'nullable', 'string', 'min:10', 'max:2000'],
-            'diagnosticoCorregido' => ['required_if:estado,modificada', 'nullable', 'string', 'min:20', 'max:4000'],
+            'observacionesCliente' => ['required_if:estado,confirmada,modificada', 'nullable', 'string'],
+            'notasInternas' => ['nullable', 'string'],
+            'motivoDiferencia' => ['required_if:estado,modificada,descartada', 'nullable', 'string'],
+            'diagnosticoCorregido' => ['required_if:estado,modificada', 'nullable', 'string'],
             'servicioCorregido' => ['nullable', 'string', 'max:200'],
             'prioridadCorregida' => ['nullable', Rule::in(['baja', 'media', 'alta', 'critica'])],
-            'pruebasRealizadas' => ['nullable', 'string', 'max:3000'],
-            'observaciones' => ['nullable', 'string', 'max:3000'],
-            'resumenAjustado' => ['nullable', 'string', 'max:1800'],
+            'pruebasRealizadas' => ['nullable', 'string'],
+            'observaciones' => ['nullable', 'string'],
+            'resumenAjustado' => ['nullable', 'string'],
         ];
     }
 

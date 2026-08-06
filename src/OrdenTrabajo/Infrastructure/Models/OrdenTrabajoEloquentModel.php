@@ -24,10 +24,12 @@ class OrdenTrabajoEloquentModel extends Model
     public function servicios(): HasMany { return $this->hasMany(OrdenServicioEloquentModel::class, 'orden_id'); }
     public function asignaciones(): HasMany { return $this->hasMany(OrdenMecanicoEloquentModel::class, 'orden_id'); }
     public function diagnosticos(): HasMany { return $this->hasMany(DiagnosticoTecnicoEloquentModel::class, 'orden_id'); }
+    public function repuestosRequeridos(): HasMany { return $this->hasMany(OrdenRepuestoRequeridoEloquentModel::class, 'orden_id'); }
+    public function avances(): HasMany { return $this->hasMany(OrdenAvanceEloquentModel::class, 'orden_id'); }
     public function scopeVisiblePara(Builder $query, UserEloquentModel $usuario): Builder
     {
         if ($usuario->hasRole('Cliente')) return $query->whereHas('cliente', fn (Builder $q) => $q->where('usuario_id', $usuario->id));
-        if ($usuario->hasRole('Mecánico')) return $query->whereHas('asignaciones', fn (Builder $q) => $q->where('activo', true)->whereHas('mecanico', fn (Builder $m) => $m->where('usuario_id', $usuario->id)));
+        if ($usuario->hasRole('Mecánico')) return $query->whereHas('asignaciones', fn (Builder $q) => $q->where('activo', true)->whereHas('mecanico', fn (Builder $m) => $m->where('usuario_id', $usuario->id)->orWhere(fn (Builder $correo) => $correo->whereNull('usuario_id')->whereRaw('LOWER(email) = ?', [mb_strtolower($usuario->email)]))));
         return $query;
     }
 }

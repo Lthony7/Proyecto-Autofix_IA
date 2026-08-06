@@ -13,13 +13,13 @@ function dinero(valor:string){return Number(valor).toLocaleString('es-CO',{minim
   <Head title="Facturación" />
   <UDashboardPanel>
     <template #header>
-      <UDashboardNavbar title="Facturación definitiva"><template #leading><UDashboardSidebarCollapse /></template></UDashboardNavbar>
+      <UDashboardNavbar title="Facturación"><template #leading><UDashboardSidebarCollapse /></template></UDashboardNavbar>
     </template>
     <template #body>
       <div class="space-y-6">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p class="text-sm text-muted">Comprobantes emitidos desde órdenes finalizadas</p>
+            <p class="text-sm text-muted">Comprobantes definitivos de órdenes finalizadas</p>
             <p class="text-3xl font-semibold">{{ facturas.total }} facturas</p>
           </div>
           <form class="flex gap-2" @submit.prevent="buscar">
@@ -28,7 +28,7 @@ function dinero(valor:string){return Number(valor).toLocaleString('es-CO',{minim
           </form>
         </div>
 
-        <UAlert icon="i-lucide-info" color="neutral" variant="subtle" title="Las facturas nuevas se emiten desde el detalle de una orden finalizada o entregada." />
+        <UAlert icon="i-lucide-info" color="neutral" variant="subtle" title="Las facturas se emiten únicamente desde órdenes finalizadas con servicios completados y repuestos realmente utilizados." />
 
         <div class="overflow-hidden rounded-lg border border-default">
           <div class="hidden grid-cols-[minmax(9rem,.8fr)_minmax(13rem,1.2fr)_minmax(12rem,1fr)_minmax(11rem,.9fr)_auto] gap-4 border-b border-default bg-elevated/50 px-4 py-3 text-xs font-medium uppercase text-muted md:grid">

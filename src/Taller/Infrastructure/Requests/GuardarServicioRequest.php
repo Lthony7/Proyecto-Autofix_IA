@@ -14,7 +14,7 @@ class GuardarServicioRequest extends FormRequest
         return [
             'especialidad_id' => ['nullable', 'uuid', Rule::exists('especialidades', 'id')->where('estado', 'activo')],
             'codigo' => ['required', 'max:30', Rule::unique('servicios_taller')], 'nombre' => ['required', 'max:150', Rule::unique('servicios_taller')],
-            'descripcion' => ['nullable', 'string', 'max:2000'], 'duracion_minutos' => ['required', 'integer', 'between:15,1440'], 'precio_base' => ['required', 'decimal:0,2', 'min:0'],
+            'descripcion' => ['nullable', 'string'], 'duracion_minutos' => ['required', 'integer', 'between:15,1440'], 'precio_base' => ['required', 'decimal:0,2', 'min:0'],
         ];
     }
 }

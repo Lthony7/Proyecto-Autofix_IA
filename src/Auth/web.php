@@ -12,6 +12,9 @@ Route::middleware('guest')->group(function () {
     Route::get('/login', [WebAuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [WebAuthController::class, 'login'])
         ->middleware('throttle:5,1');
+    Route::get('/register', [WebAuthController::class, 'showRegistrationForm'])->name('register');
+    Route::post('/register', [WebAuthController::class, 'register'])
+        ->middleware('throttle:3,1');
 });
 
 Route::middleware('auth')->group(function () {

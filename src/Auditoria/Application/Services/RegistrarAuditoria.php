@@ -13,9 +13,10 @@ class RegistrarAuditoria
         ?string $recursoId = null,
         array $cambios = [],
         ?Request $request = null,
+        ?string $usuarioId = null,
     ): void {
         AuditoriaEloquentModel::create([
-            'usuario_id' => auth()->id(),
+            'usuario_id' => $usuarioId ?? auth()->id(),
             'accion' => $accion,
             'recurso_tipo' => $recursoTipo,
             'recurso_id' => $recursoId,

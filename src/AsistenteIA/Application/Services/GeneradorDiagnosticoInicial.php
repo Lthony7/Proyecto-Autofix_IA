@@ -124,15 +124,15 @@ PROMPT;
     {
         $tipo = mb_strtolower((string) ($entrada['categoria_falla'] ?? 'otro'));
         $mapa = [
-            'frenos' => ['Frenos', 'Sistema de frenos', ['Desgaste de componentes de fricción', 'Irregularidad en discos o tambores', 'Anomalía del circuito hidráulico'], ['Medidor de espesor', 'Escáner ABS', 'Manómetro hidráulico'], 'Revisión del sistema de frenos'],
-            'motor' => ['Motor', 'Mecánica de motor', ['Anomalía de combustión o alimentación', 'Lectura incorrecta de sensores', 'Mantenimiento pendiente relacionado'], ['Escáner OBD', 'Manómetro de compresión', 'Multímetro'], 'Diagnóstico de motor'],
-            'electrico' => ['Sistema eléctrico', 'Sistema eléctrico', ['Batería con carga insuficiente', 'Sistema de carga fuera de rango', 'Resistencia en conexiones o cableado'], ['Multímetro', 'Probador de batería', 'Pinza amperimétrica'], 'Diagnóstico eléctrico y escáner'],
-            'suspension' => ['Suspensión y dirección', 'Suspensión y dirección', ['Desgaste de amortiguadores o bujes', 'Alineación fuera de especificación', 'Holgura en componentes de dirección'], ['Elevador', 'Alineadora', 'Palanca de inspección'], 'Revisión de suspensión y dirección'],
-            'transmision' => ['Transmisión', 'Transmisión', ['Desgaste de embrague o actuadores', 'Nivel o condición inadecuada del fluido', 'Falla de sensores o control de transmisión'], ['Escáner OBD', 'Manómetro de presión', 'Equipo de inspección'], 'Diagnóstico de transmisión'],
-            'climatizacion' => ['Climatización', 'Climatización', ['Carga insuficiente de refrigerante', 'Compresor o embrague con funcionamiento irregular', 'Falla eléctrica en sensores o ventilación'], ['Manómetros A/C', 'Detector de fugas', 'Multímetro'], 'Diagnóstico de aire acondicionado'],
-            'otro' => ['Sistema por confirmar', 'Por confirmar', ['La información disponible requiere inspección física', 'Puede existir una condición no identificable sin pruebas'], ['Escáner OBD', 'Herramientas de inspección'], 'Inspección general'],
+            'frenos' => ['Frenos', 'Sistema de frenos', ['Desgaste de componentes de fricción', 'Irregularidad en discos o tambores', 'Anomalía del circuito hidráulico'], ['Medidor de espesor', 'Escáner ABS', 'Manómetro hidráulico'], 'Revisión del sistema de frenos', [['nombre'=>'Pastillas de freno','cantidad'=>1,'motivo'=>'Posible desgaste; confirmar espesor y referencia por eje.','probabilidad_o_nivel'=>'media']]],
+            'motor' => ['Motor', 'Mecánica de motor', ['Anomalía de combustión o alimentación', 'Lectura incorrecta de sensores', 'Mantenimiento pendiente relacionado'], ['Escáner OBD', 'Manómetro de compresión', 'Multímetro'], 'Diagnóstico de motor', [['nombre'=>'Filtro de aire','cantidad'=>1,'motivo'=>'Elemento de mantenimiento relacionado; revisar condición antes de reemplazar.','probabilidad_o_nivel'=>'baja']]],
+            'electrico' => ['Sistema eléctrico', 'Sistema eléctrico', ['Batería con carga insuficiente', 'Sistema de carga fuera de rango', 'Resistencia en conexiones o cableado'], ['Multímetro', 'Probador de batería', 'Pinza amperimétrica'], 'Diagnóstico eléctrico y escáner', [['nombre'=>'Batería','cantidad'=>1,'motivo'=>'Solo si la prueba de capacidad confirma deterioro.','probabilidad_o_nivel'=>'media']]],
+            'suspension' => ['Suspensión y dirección', 'Suspensión y dirección', ['Desgaste de amortiguadores o bujes', 'Alineación fuera de especificación', 'Holgura en componentes de dirección'], ['Elevador', 'Alineadora', 'Palanca de inspección'], 'Revisión de suspensión y dirección', [['nombre'=>'Amortiguador','cantidad'=>2,'motivo'=>'Posible desgaste; confirmar fugas, rebote y aplicación por eje.','probabilidad_o_nivel'=>'baja']]],
+            'transmision' => ['Transmisión', 'Transmisión', ['Desgaste de embrague o actuadores', 'Nivel o condición inadecuada del fluido', 'Falla de sensores o control de transmisión'], ['Escáner OBD', 'Manómetro de presión', 'Equipo de inspección'], 'Diagnóstico de transmisión', [['nombre'=>'Fluido de transmisión','cantidad'=>1,'motivo'=>'Verificar nivel, especificación y condición antes de intervenir.','probabilidad_o_nivel'=>'baja']]],
+            'climatizacion' => ['Climatización', 'Climatización', ['Carga insuficiente de refrigerante', 'Compresor o embrague con funcionamiento irregular', 'Falla eléctrica en sensores o ventilación'], ['Manómetros A/C', 'Detector de fugas', 'Multímetro'], 'Diagnóstico de aire acondicionado', [['nombre'=>'Filtro de cabina','cantidad'=>1,'motivo'=>'Revisar restricción del flujo; no explica por sí solo una pérdida de refrigeración.','probabilidad_o_nivel'=>'baja']]],
+            'otro' => ['Sistema por confirmar', 'Por confirmar', ['La información disponible requiere inspección física', 'Puede existir una condición no identificable sin pruebas'], ['Escáner OBD', 'Herramientas de inspección'], 'Inspección general', []],
         ];
-        [$sistema, $especialidad, $causas, $herramientas, $servicio] = $mapa[$tipo] ?? $mapa['otro'];
+        [$sistema, $especialidad, $causas, $herramientas, $servicio, $repuestos] = $mapa[$tipo] ?? $mapa['otro'];
         $noCircula = ($entrada['puede_circular'] ?? '') === 'no';
         $conPrecaucion = ($entrada['puede_circular'] ?? '') === 'con_dificultad';
         $urgenciaEntrada = $entrada['urgencia_percibida'] ?? 'media';
@@ -152,7 +152,7 @@ PROMPT;
             'especialidad_requerida' => $especialidad, 'herramientas_sugeridas' => $herramientas,
             'tiempo_estimado_diagnostico' => 'Entre 45 y 90 minutos, sujeto a pruebas.', 'tiempo_estimado_reparacion' => 'Por determinar después del diagnóstico físico.',
             'complejidad' => $tipo === 'otro' ? 'media' : 'baja', 'servicios_sugeridos' => [$servicio],
-            'repuestos_posibles' => [], 'observaciones_mecanico' => 'Confirmar o descartar cada hipótesis y registrar valores, pruebas y observaciones visibles para el cliente.',
+            'repuestos_posibles' => $repuestos, 'observaciones_mecanico' => 'Confirmar o descartar cada hipótesis y registrar valores, pruebas y observaciones visibles para el cliente.',
             'datos_faltantes' => ['Códigos OBD o testigos exactos', 'Resultado de una inspección física', 'Condición precisa en la que se reproduce la falla'],
             'advertencia' => self::ADVERTENCIA,
         ];

@@ -21,8 +21,8 @@ class CambiarEstadoCitaRequest extends FormRequest
     {
         return [
             'estado' => ['required', Rule::in(['confirmada', 'reprogramada', 'atendida', 'cancelada'])],
-            'observaciones' => ['nullable', 'string', 'max:2000'],
-            'motivo' => ['required_if:estado,cancelada', 'nullable', 'string', 'min:5', 'max:1000'],
+            'observaciones' => ['nullable', 'string'],
+            'motivo' => ['required_if:estado,cancelada', 'nullable', 'string'],
             'inicio' => ['required_if:estado,reprogramada', 'nullable', 'date', 'after:now'],
             'mecanico_id' => ['nullable', 'uuid', Rule::exists('mecanicos', 'id')->where('estado', 'activo')],
         ];
