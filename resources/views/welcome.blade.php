@@ -21,8 +21,11 @@
             --green-700: #15803d;
             --green-800: #166534;
             --green-900: #14532d;
+            --green-950: #052e16;
             --ink: #0f172a;
+            --ink-strong: #020617;
             --muted: #475569;
+            --muted-strong: #334155;
             --line: #e2e8f0;
             --bg: #f8fafc;
             --font: 'Public Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
@@ -88,12 +91,29 @@
         /* Hero */
         .hero {
             position: relative;
+            isolation: isolate;
             overflow: hidden;
+            color: #fff;
+            background-color: #0b1f17;
+            border-bottom: 1px solid var(--green-800);
+        }
+
+        .hero::before {
+            position: absolute;
+            inset: 0;
+            z-index: -2;
+            content: '';
+            background: url('/images/taller-automatizado.jpg') center / cover no-repeat;
+        }
+
+        .hero::after {
+            position: absolute;
+            inset: 0;
+            z-index: -1;
+            content: '';
             background:
-                radial-gradient(circle at 85% 12%, rgb(34 197 94 / .16), transparent 26rem),
-                radial-gradient(circle at 8% 88%, rgb(22 163 74 / .10), transparent 22rem),
-                linear-gradient(180deg, #ffffff 0%, var(--bg) 100%);
-            border-bottom: 1px solid var(--line);
+                linear-gradient(100deg, rgb(2 20 13 / .94) 0%, rgb(5 32 22 / .86) 42%, rgb(8 42 29 / .62) 100%),
+                radial-gradient(circle at 78% 20%, rgb(34 197 94 / .22), transparent 24rem);
         }
 
         .hero .container {
@@ -110,11 +130,12 @@
             gap: .5rem;
             padding: .35rem .9rem;
             border-radius: 999px;
-            background: var(--green-100);
-            color: var(--green-800);
+            background: rgb(187 247 208 / .14);
+            color: #d1fae5;
             font-size: .8rem;
             font-weight: 700;
-            border: 1px solid var(--green-200);
+            border: 1px solid rgb(74 222 128 / .4);
+            backdrop-filter: blur(4px);
             margin-bottom: 1.25rem;
         }
 
@@ -122,30 +143,33 @@
             width: .5rem;
             height: .5rem;
             border-radius: 999px;
-            background: var(--green-500);
-            box-shadow: 0 0 0 3px rgb(34 197 94 / .25);
+            background: #4ade80;
+            box-shadow: 0 0 0 3px rgb(74 222 128 / .3);
         }
 
         .hero h1 { font-size: clamp(2.2rem, 5vw, 3.4rem); line-height: 1.08; letter-spacing: -.03em; font-weight: 800; }
-        .hero h1 .accent { color: var(--green-600); }
+        .hero h1 .accent { color: #4ade80; }
 
-        .hero p.lead { margin-top: 1.1rem; font-size: 1.08rem; color: var(--muted); max-width: 34rem; }
+        .hero p.lead { margin-top: 1.1rem; font-size: 1.08rem; color: rgb(226 232 240 / .94); max-width: 34rem; }
 
         .hero-cta { margin-top: 2rem; display: flex; flex-wrap: wrap; gap: .8rem; }
 
         .hero-meta { margin-top: 2.4rem; display: flex; flex-wrap: wrap; gap: 1.4rem; }
         .hero-meta div { display: flex; flex-direction: column; }
-        .hero-meta strong { font-size: 1.15rem; font-weight: 800; color: var(--green-700); }
-        .hero-meta span { font-size: .78rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+        .hero-meta strong { font-size: 1.15rem; font-weight: 800; color: #4ade80; }
+        .hero-meta span { font-size: .78rem; color: rgb(226 232 240 / .82); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+
+        .hero .btn-outline { border-color: rgb(255 255 255 / .5); color: #fff; background: rgb(255 255 255 / .1); backdrop-filter: blur(4px); }
+        .hero .btn-outline:hover { border-color: #4ade80; color: #bbf7d0; background: rgb(255 255 255 / .16); }
 
         .hero-visual { position: relative; display: flex; justify-content: center; }
         .hero-visual .logo-wrap {
             width: min(22rem, 100%);
             border-radius: 1.4rem;
-            border: 1px solid var(--line);
+            border: 1px solid rgb(255 255 255 / .5);
             background: #fff;
             padding: 2rem;
-            box-shadow: 0 30px 60px -35px rgb(21 128 61 / .45);
+            box-shadow: 0 30px 60px -35px rgb(0 0 0 / .6);
         }
         .hero-visual .logo-wrap img { width: 100%; height: auto; }
 
@@ -153,24 +177,25 @@
         section { padding-block: 4.5rem; }
 
         .section-head { text-align: center; max-width: 42rem; margin: 0 auto 3rem; }
-        .section-head .kicker { color: var(--green-600); font-weight: 700; font-size: .8rem; text-transform: uppercase; letter-spacing: .1em; }
+        .section-head .kicker { color: var(--green-700); font-weight: 800; font-size: .8rem; text-transform: uppercase; letter-spacing: .1em; }
         .section-head h2 { font-size: clamp(1.7rem, 3.5vw, 2.4rem); letter-spacing: -.02em; font-weight: 800; margin-top: .5rem; }
-        .section-head p { color: var(--muted); margin-top: .8rem; }
+        .section-head p { color: var(--muted-strong); margin-top: .8rem; }
 
         /* Features grid */
         .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.1rem; }
 
         .feature {
             background: #fff;
-            border: 1px solid var(--line);
+            border: 1px solid #cbd5e1;
             border-radius: .9rem;
             padding: 1.35rem;
+            box-shadow: 0 8px 24px -18px rgb(15 23 42 / .4);
             transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
         }
 
         .feature:hover {
             transform: translateY(-3px);
-            border-color: var(--green-400);
+            border-color: var(--green-600);
             box-shadow: 0 18px 40px -30px rgb(21 128 61 / .5);
         }
 
@@ -180,15 +205,15 @@
             border-radius: .75rem;
             display: grid;
             place-items: center;
-            background: var(--green-100);
-            color: var(--green-700);
+            background: var(--green-600);
+            color: #fff;
             font-size: 1.25rem;
             font-weight: 800;
             margin-bottom: .9rem;
         }
 
-        .feature h3 { font-size: 1.02rem; font-weight: 700; }
-        .feature p { font-size: .88rem; color: var(--muted); margin-top: .35rem; }
+        .feature h3 { font-size: 1.02rem; font-weight: 700; color: var(--ink-strong); }
+        .feature p { font-size: .88rem; color: var(--muted-strong); margin-top: .35rem; }
 
         /* Roles */
         .roles {
@@ -198,20 +223,21 @@
         }
 
         .roles .section-head h2 { color: #fff; }
-        .roles .section-head p { color: rgb(226 232 240 / .75); }
-        .roles .section-head .kicker { color: var(--green-400); }
+        .roles .section-head p { color: rgb(226 232 240 / .9); }
+        .roles .section-head .kicker { color: #4ade80; }
 
         .roles-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.1rem; }
 
         .role {
-            border: 1px solid rgb(255 255 255 / .12);
+            border: 1px solid rgb(255 255 255 / .25);
             border-radius: .9rem;
             padding: 1.4rem;
-            background: rgb(255 255 255 / .05);
+            background: rgb(255 255 255 / .1);
+            backdrop-filter: blur(4px);
             transition: transform 200ms ease, border-color 200ms ease, background 200ms ease;
         }
 
-        .role:hover { transform: translateY(-3px); border-color: var(--green-400); background: rgb(255 255 255 / .09); }
+        .role:hover { transform: translateY(-3px); border-color: #4ade80; background: rgb(255 255 255 / .16); }
 
         .role .tag {
             display: inline-block;
@@ -219,34 +245,35 @@
             font-weight: 800;
             letter-spacing: .08em;
             text-transform: uppercase;
-            color: var(--green-900);
-            background: var(--green-400);
+            color: #052e16;
+            background: #4ade80;
             border-radius: 999px;
             padding: .2rem .65rem;
             margin-bottom: .8rem;
         }
 
-        .role h3 { font-size: 1.05rem; font-weight: 700; }
-        .role p { font-size: .87rem; color: rgb(226 232 240 / .78); margin-top: .4rem; }
+        .role h3 { font-size: 1.05rem; font-weight: 700; color: #fff; }
+        .role p { font-size: .87rem; color: rgb(226 232 240 / .92); margin-top: .4rem; }
 
         /* CTA */
         .cta { text-align: center; }
         .cta .inner {
             background:
-                radial-gradient(circle at 50% 0%, rgb(34 197 94 / .14), transparent 20rem),
+                radial-gradient(circle at 50% 0%, rgb(22 163 74 / .12), transparent 20rem),
                 #fff;
-            border: 1px solid var(--line);
+            border: 1px solid #cbd5e1;
             border-radius: 1.2rem;
             padding: 3.5rem 2rem;
+            box-shadow: 0 12px 32px -24px rgb(15 23 42 / .4);
         }
         .cta h2 { font-size: clamp(1.7rem, 3.5vw, 2.3rem); letter-spacing: -.02em; font-weight: 800; }
-        .cta p { color: var(--muted); max-width: 30rem; margin: .8rem auto 1.8rem; }
+        .cta p { color: var(--muted-strong); max-width: 30rem; margin: .8rem auto 1.8rem; }
 
         /* Footer */
-        footer { border-top: 1px solid var(--line); background: #fff; padding-block: 2rem; }
+        footer { border-top: 1px solid #cbd5e1; background: #fff; padding-block: 2rem; }
         footer .container { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; }
         footer .brand img { width: 1.9rem; height: 1.9rem; }
-        footer .muted { color: var(--muted); font-size: .85rem; }
+        footer .muted { color: var(--muted-strong); font-size: .85rem; }
 
         @media (max-width: 860px) {
             .hero .container { grid-template-columns: 1fr; padding-block: 3.5rem; text-align: center; }
@@ -254,6 +281,11 @@
             .hero-cta { justify-content: center; }
             .hero-meta { justify-content: center; }
             .hero-visual .logo-wrap { width: min(16rem, 100%); }
+        }
+
+        @media (max-width: 480px) {
+            .nav .container { gap: .5rem; }
+            .btn { padding: .5rem .9rem; font-size: .85rem; }
         }
     </style>
 </head>
