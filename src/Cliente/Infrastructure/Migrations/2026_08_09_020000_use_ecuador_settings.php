@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -18,21 +19,20 @@ return new class extends Migration
         DB::statement("ALTER TABLE clientes ADD CONSTRAINT clientes_tipo_documento_check CHECK (tipo_documento IN ('CEDULA', 'RUC', 'PASAPORTE'))");
 
         // Moneda: convertir COP a USD en las tablas que ya tienen restricciones.
-        DB::table('facturas_orden')->where('moneda', 'COP')->update(['moneda' => 'USD']);
-        DB::statement('ALTER TABLE facturas_orden DROP CONSTRAINT IF EXISTS facturas_orden_moneda_check');
-        DB::statement("ALTER TABLE facturas_orden ADD CONSTRAINT facturas_orden_moneda_check CHECK (moneda = 'USD')");
-
-        DB::table('facturas_cita')->where('moneda', 'COP')->update(['moneda' => 'USD']);
-        DB::statement('ALTER TABLE facturas_cita DROP CONSTRAINT IF EXISTS facturas_cita_moneda_check');
-        DB::statement("ALTER TABLE facturas_cita ADD CONSTRAINT facturas_cita_moneda_check CHECK (moneda = 'USD')");
-
-        DB::table('pagos')->where('moneda', 'COP')->update(['moneda' => 'USD']);
-        DB::statement('ALTER TABLE pagos DROP CONSTRAINT IF EXISTS pagos_moneda_check');
-        DB::statement("ALTER TABLE pagos ADD CONSTRAINT pagos_moneda_check CHECK (moneda = 'USD')");
-
-        DB::table('pago_movimientos')->where('moneda', 'COP')->update(['moneda' => 'USD']);
-        DB::statement('ALTER TABLE pago_movimientos DROP CONSTRAINT IF EXISTS pago_movimientos_moneda_check');
-        DB::statement("ALTER TABLE pago_movimientos ADD CONSTRAINT pago_movimientos_moneda_check CHECK (moneda = 'USD')");
+        // Cada bloque solo actúa sobre tablas existentes (engañoso en entornos donde
+        // la migración 2026_08_04_000002 no ha corrido aún en esa base).
+        $monedaPorTabla = [
+            'facturas_orden' => 'facturas_orden_moneda_check',
+            'facturas_cita' => 'facturas_cita_moneda_check',
+            'pagos' => 'pagos_moneda_check',
+            'pago_movimientos' => 'pago_movimientos_moneda_check',
+        ];
+        foreach ($monedaPorTabla as $tabla => $constraint) {
+            if (! Schema::hasTable($tabla)) continue;
+            DB::table($tabla)->where('moneda', 'COP')->update(['moneda' => 'USD']);
+            DB::statement("ALTER TABLE {$tabla} DROP CONSTRAINT IF EXISTS {$constraint}");
+            DB::statement("ALTER TABLE {$tabla} ADD CONSTRAINT {$constraint} CHECK (moneda = 'USD')");
+        }
     }
 
     public function down(): void
