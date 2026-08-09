@@ -6,9 +6,7 @@ use Src\Auth\Application\Controllers\WebAuthController;
 use Src\Auth\Application\Controllers\UserWebController;
 
 Route::middleware('guest')->group(function () {
-    Route::get('/', function () {
-        return redirect()->route('login');
-    });
+    Route::view('/', 'welcome');
 
     Route::get('/login', [WebAuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [WebAuthController::class, 'login'])
