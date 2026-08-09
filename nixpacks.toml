@@ -1,0 +1,9 @@
+[phases.build]
+cmds = [
+    "composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader",
+    "npm ci",
+    "npm run build"
+]
+
+[start]
+cmd = "php artisan db:schema:prepare --ansi && php artisan migrate --force --ansi && php artisan serve --host=0.0.0.0 --port=$PORT"
