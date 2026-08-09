@@ -132,7 +132,7 @@ const handleCancel = () => {
                   inputmode="tel"
                   autocomplete="tel"
                   maxlength="13"
-                  placeholder="3001234567"
+                  placeholder="0987654321"
                   icon="i-lucide-phone"
                   required
                   size="xl"

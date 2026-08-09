@@ -82,7 +82,7 @@ function handleSubmit() {
             </template>
           </FormField>
 
-          <FormField label="Teléfono" name="telefono" required :error="errors.telefono" hint="Número colombiano de 10 dígitos o con prefijo +57.">
+          <FormField label="Teléfono" name="telefono" required :error="errors.telefono" hint="Número ecuatoriano de 10 dígitos (09) o con prefijo +593.">
             <template #default="{ fieldAttrs }">
               <UInput
                 v-bind="fieldAttrs"
