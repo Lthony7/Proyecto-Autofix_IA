@@ -33,7 +33,7 @@ function cambiarEstado(vehiculo: Vehiculo) {
               </div>
               <dl class="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
                 <div><dt class="text-muted">Cliente</dt><dd>{{ vehiculo.cliente }}</dd></div>
-                <div><dt class="text-muted">Kilometraje</dt><dd>{{ vehiculo.kilometraje.toLocaleString('es-CO') }} km</dd></div>
+                <div><dt class="text-muted">Kilometraje</dt><dd>{{ vehiculo.kilometraje.toLocaleString('es-EC') }} km</dd></div>
                 <div><dt class="text-muted">Combustible</dt><dd>{{ vehiculo.combustible }}</dd></div>
               </dl>
             </div>

@@ -99,10 +99,10 @@ function rangoFechas(inicio: string, fin: string) {
   return fechas
 }
 function formatoFecha(fecha: Date, opciones: Intl.DateTimeFormatOptions) {
-  return new Intl.DateTimeFormat('es-CO', opciones).format(fecha)
+  return new Intl.DateTimeFormat('es-EC', opciones).format(fecha)
 }
 function hora(valor: string) {
-  return new Intl.DateTimeFormat('es-CO', { hour: '2-digit', minute: '2-digit' }).format(new Date(valor))
+  return new Intl.DateTimeFormat('es-EC', { hour: '2-digit', minute: '2-digit' }).format(new Date(valor))
 }
 function esHoy(fecha: Date) {
   return claveFecha(fecha) === claveFecha(new Date())

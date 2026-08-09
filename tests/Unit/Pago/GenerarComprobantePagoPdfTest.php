@@ -14,20 +14,20 @@ class GenerarComprobantePagoPdfTest extends TestCase
     {
         $pago = new PagoEloquentModel([
             'numero' => 'PG-0001', 'comprobante_numero' => 'RC-0001', 'orden_id' => 'orden-id',
-            'factura_id' => 'factura-id', 'monto' => '50000.00', 'moneda' => 'COP',
+            'factura_id' => 'factura-id', 'monto' => '500.00', 'moneda' => 'USD',
             'metodo' => 'transferencia', 'referencia' => 'REF-1', 'estado' => 'registrado',
             'pagado_en' => '2026-08-09 11:00:00', 'factura_numero_snapshot' => 'FAC-0001',
-            'orden_numero_snapshot' => 'OT-0001', 'cliente_tipo_documento_snapshot' => 'CC',
+            'orden_numero_snapshot' => 'OT-0001', 'cliente_tipo_documento_snapshot' => 'CEDULA',
             'cliente_documento_snapshot' => '123', 'cliente_nombre_snapshot' => 'Cliente histórico',
             'vehiculo_placa_snapshot' => 'ABC123', 'vehiculo_descripcion_snapshot' => 'Marca Modelo',
-            'servicios_snapshot' => '100000.00', 'repuestos_snapshot' => '0.00',
+            'servicios_snapshot' => '1000.00', 'repuestos_snapshot' => '0.00',
             'descuento_snapshot' => '0.00', 'impuesto_snapshot' => '0.00',
             'detalle_snapshot' => [[
                 'tipo' => 'servicio', 'codigo' => null, 'descripcion' => 'Diagnóstico',
-                'cantidad' => '1.000', 'precioUnitario' => '100000.00', 'subtotal' => '100000.00',
+                'cantidad' => '1.000', 'precioUnitario' => '1000.00', 'subtotal' => '1000.00',
             ]],
-            'total_orden_snapshot' => '100000.00', 'pagado_acumulado_snapshot' => '50000.00',
-            'saldo_resultante_snapshot' => '50000.00',
+            'total_orden_snapshot' => '1000.00', 'pagado_acumulado_snapshot' => '500.00',
+            'saldo_resultante_snapshot' => '500.00',
         ]);
 
         $generador = app(GenerarComprobantePagoPdf::class);

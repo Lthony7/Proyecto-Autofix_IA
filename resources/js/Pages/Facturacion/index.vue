@@ -6,7 +6,7 @@ interface Factura{id:string;numero:string;cliente_nombre:string;cliente_document
 interface Pagina<T>{data:T[];links:{url:string|null;label:string;active:boolean}[];total:number}
 const props=defineProps<{facturas:Pagina<Factura>;buscar:string}>();const busqueda=ref(props.buscar)
 function buscar(){router.get(route('facturacion.index'),{buscar:busqueda.value},{preserveState:true})}
-function dinero(valor:string){return Number(valor).toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function dinero(valor:string){return Number(valor).toLocaleString('es-EC',{minimumFractionDigits:2,maximumFractionDigits:2})}
 </script>
 
 <template>
@@ -52,7 +52,7 @@ function dinero(valor:string){return Number(valor).toLocaleString('es-CO',{minim
             <div>
               <p class="text-xs font-medium uppercase text-muted md:hidden">Orden y vehículo</p>
               <p>{{ f.orden.numero }} · {{ f.vehiculo_placa }}</p>
-              <p class="text-sm text-muted">{{ new Date(f.emitida_en).toLocaleString('es-CO') }}</p>
+              <p class="text-sm text-muted">{{ new Date(f.emitida_en).toLocaleString('es-EC') }}</p>
             </div>
             <div>
               <p class="text-xs font-medium uppercase text-muted md:hidden">Total</p>

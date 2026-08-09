@@ -726,7 +726,7 @@ function emitirFactura() {
     });
 }
 function dinero(valor: string | number | null) {
-    return Number(valor).toLocaleString("es-CO", {
+    return Number(valor).toLocaleString("es-EC", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     });
@@ -807,7 +807,7 @@ function dinero(valor: string | number | null) {
                                         orden.ultimaActualizacion
                                             ? new Date(
                                                   orden.ultimaActualizacion,
-                                              ).toLocaleString("es-CO")
+                                              ).toLocaleString("es-EC")
                                             : "Sin dato"
                                     }}
                                 </p>
@@ -823,7 +823,7 @@ function dinero(valor: string | number | null) {
                                         orden.fechaEstimadaFinalizacion
                                             ? new Date(
                                                   orden.fechaEstimadaFinalizacion,
-                                              ).toLocaleString("es-CO")
+                                              ).toLocaleString("es-EC")
                                             : "Por definir"
                                     }}
                                 </p>
@@ -873,7 +873,7 @@ function dinero(valor: string | number | null) {
                                         :label="
                                             new Date(cita.inicio) <= new Date()
                                                 ? 'Registrar llegada'
-                                                : `Llegada disponible ${new Date(cita.inicio).toLocaleDateString('es-CO')}`
+                                                : `Llegada disponible ${new Date(cita.inicio).toLocaleDateString('es-EC')}`
                                         "
                                         icon="i-lucide-log-in"
                                         color="success"
@@ -900,7 +900,7 @@ function dinero(valor: string | number | null) {
                                 <p class="font-medium">
                                     {{
                                         new Date(cita.inicio).toLocaleString(
-                                            "es-CO",
+                                            "es-EC",
                                         )
                                     }}
                                 </p>
@@ -933,7 +933,7 @@ function dinero(valor: string | number | null) {
                                     {{
                                         new Date(
                                             cita.atendidaEn,
-                                        ).toLocaleString("es-CO")
+                                        ).toLocaleString("es-EC")
                                     }}
                                 </p>
                             </div>
@@ -949,7 +949,7 @@ function dinero(valor: string | number | null) {
                             variant="subtle"
                             icon="i-lucide-clock"
                             title="La llegada aún no está disponible"
-                            :description="`Podrás registrarla desde esta orden cuando comience la cita: ${new Date(cita.inicio).toLocaleString('es-CO')}.`"
+                            :description="`Podrás registrarla desde esta orden cuando comience la cita: ${new Date(cita.inicio).toLocaleString('es-EC')}.`"
                         />
                         <div class="mt-4 rounded-lg bg-elevated/50 p-4">
                             <p class="text-xs font-bold uppercase text-muted">
@@ -965,7 +965,7 @@ function dinero(valor: string | number | null) {
                                 Kilometraje reportado:
                                 {{
                                     Number(cita.kilometraje).toLocaleString(
-                                        "es-CO",
+                                        "es-EC",
                                     )
                                 }}
                                 km
@@ -1010,7 +1010,7 @@ function dinero(valor: string | number | null) {
                                 >
                                     {{
                                         new Date(h.fecha).toLocaleString(
-                                            "es-CO",
+                                            "es-EC",
                                         )
                                     }}
                                     · {{ h.estadoAnterior || "inicio" }} →
@@ -1297,7 +1297,7 @@ function dinero(valor: string | number | null) {
                             {{ orden.vehiculo }} · {{ orden.cliente }}
                         </p>
                         <p v-if="orden.kilometraje" class="text-sm text-muted">
-                            {{ orden.kilometraje.toLocaleString("es-CO") }} km
+                            {{ orden.kilometraje.toLocaleString("es-EC") }} km
                         </p>
                         <p class="mt-4 whitespace-pre-wrap">
                             {{ orden.fallaReportada }}
@@ -1489,7 +1489,7 @@ function dinero(valor: string | number | null) {
                                     </div>
                                     <span class="text-xs text-muted">{{
                                         new Date(item.createdAt).toLocaleString(
-                                            "es-CO",
+                                            "es-EC",
                                         )
                                     }}</span>
                                 </div>
@@ -2149,7 +2149,7 @@ function dinero(valor: string | number | null) {
                                         Estado financiero
                                     </h2>
                                     <p class="text-sm text-muted">
-                                        Valores expresados en COP
+                                        Valores expresados en USD
                                     </p>
                                 </div>
                                 <UBadge
@@ -2306,7 +2306,7 @@ function dinero(valor: string | number | null) {
                                         {{
                                             new Date(
                                                 item.pagadoEn,
-                                            ).toLocaleString("es-CO")
+                                            ).toLocaleString("es-EC")
                                         }}
                                         · {{ item.comprobante }}
                                     </p>
@@ -2385,9 +2385,9 @@ function dinero(valor: string | number | null) {
                                     {{
                                         new Date(
                                             factura.emitidaEn,
-                                        ).toLocaleString("es-CO")
+                                        ).toLocaleString("es-EC")
                                     }}
-                                    · Total $ {{ dinero(factura.total) }} COP
+                                    · Total $ {{ dinero(factura.total) }} USD
                                 </p>
                             </div>
                             <Link
@@ -2876,7 +2876,7 @@ function dinero(valor: string | number | null) {
                             <p class="mt-2 text-xs text-muted">
                                 {{
                                     new Date(d.createdAt).toLocaleString(
-                                        "es-CO",
+                                        "es-EC",
                                     )
                                 }}
                             </p>
@@ -3072,7 +3072,7 @@ function dinero(valor: string | number | null) {
                                 <p class="text-xs text-muted">
                                     {{
                                         new Date(item.createdAt).toLocaleString(
-                                            "es-CO",
+                                            "es-EC",
                                         )
                                     }}
                                     · {{ item.autor || "Taller" }}

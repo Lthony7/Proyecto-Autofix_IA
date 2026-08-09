@@ -13,7 +13,7 @@ use Src\Cita\Infrastructure\Models\CitaEloquentModel;
 
 final class EncolarRecordatoriosCitas
 {
-    private const ZONA_HORARIA = 'America/Bogota';
+    private const ZONA_HORARIA = 'America/Guayaquil';
 
     public function ejecutar(int $limite = 100): int
     {

@@ -2,14 +2,14 @@
 import { computed, reactive, ref } from 'vue'
 import { Head, router, usePage } from '@inertiajs/vue3'
 import { route } from 'ziggy-js'
-import { ayudaDocumento, documentoNumerico, longitudDocumento, normalizarDocumento, normalizarTelefono, tiposDocumentoColombia } from '../../../utils/validation'
+import { ayudaDocumento, documentoNumerico, longitudDocumento, normalizarDocumento, normalizarTelefono, tiposDocumentoEcuador } from '../../../utils/validation'
 
 interface Horario { diaSemana: number; horaInicio: string; horaFin: string }
 interface Mecanico { id: string; usuarioId?: string; tipoDocumento: string; numeroDocumento: string; nombres: string; apellidos: string; telefono: string; email: string; fechaIngreso?: string; especialidadIds: string[]; horarios: Horario[] }
 const props = defineProps<{ mecanico: Mecanico | null; especialidades: { label: string; value: string }[]; usuarios: { label: string; value: string }[] }>()
 const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
-const tiposDocumento = tiposDocumentoColombia.filter(tipo => tipo.value !== 'NIT')
-const state = reactive({ usuarioId: props.mecanico?.usuarioId ?? '', tipoDocumento: props.mecanico?.tipoDocumento ?? 'CC', numeroDocumento: props.mecanico?.numeroDocumento ?? '', nombres: props.mecanico?.nombres ?? '', apellidos: props.mecanico?.apellidos ?? '', telefono: props.mecanico?.telefono ?? '', email: props.mecanico?.email ?? '', fechaIngreso: props.mecanico?.fechaIngreso ?? '', especialidadIds: [...(props.mecanico?.especialidadIds ?? [])], horarios: dias.map((_, i) => { const h = props.mecanico?.horarios.find(x => x.diaSemana === i + 1); return { diaSemana: i + 1, activo: !!h || (!props.mecanico && i < 6), horaInicio: h?.horaInicio ?? '08:00', horaFin: h?.horaFin ?? (i === 5 ? '13:00' : '17:00') } }) })
+const tiposDocumento = tiposDocumentoEcuador.filter(tipo => tipo.value !== 'RUC')
+const state = reactive({ usuarioId: props.mecanico?.usuarioId ?? '', tipoDocumento: props.mecanico?.tipoDocumento ?? 'CEDULA', numeroDocumento: props.mecanico?.numeroDocumento ?? '', nombres: props.mecanico?.nombres ?? '', apellidos: props.mecanico?.apellidos ?? '', telefono: props.mecanico?.telefono ?? '', email: props.mecanico?.email ?? '', fechaIngreso: props.mecanico?.fechaIngreso ?? '', especialidadIds: [...(props.mecanico?.especialidadIds ?? [])], horarios: dias.map((_, i) => { const h = props.mecanico?.horarios.find(x => x.diaSemana === i + 1); return { diaSemana: i + 1, activo: !!h || (!props.mecanico && i < 6), horaInicio: h?.horaInicio ?? '08:00', horaFin: h?.horaFin ?? (i === 5 ? '13:00' : '17:00') } }) })
 const errors = computed<Record<string, string>>(() => usePage().props.errors as Record<string, string>)
 const procesando = ref(false)
 function toggleEspecialidad(id: string, checked: boolean) { if (checked && !state.especialidadIds.includes(id)) state.especialidadIds.push(id); if (!checked) state.especialidadIds = state.especialidadIds.filter(x => x !== id) }

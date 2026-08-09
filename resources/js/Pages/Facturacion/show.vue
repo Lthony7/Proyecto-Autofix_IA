@@ -49,7 +49,7 @@ const props = defineProps<{ factura: Factura }>();
 const { can } = usePermissions();
 const enviando = ref(false);
 function dinero(valor: string) {
-    return Number(valor).toLocaleString("es-CO", {
+    return Number(valor).toLocaleString("es-EC", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     });
@@ -153,7 +153,7 @@ function enviarCorreo() {
                                     {{
                                         new Date(
                                             factura.emitida_en,
-                                        ).toLocaleString("es-CO")
+                                        ).toLocaleString("es-EC")
                                     }}
                                 </p>
                                 <p class="text-xs text-muted">
@@ -313,7 +313,7 @@ function enviarCorreo() {
                             </p>
                         </div>
                         <p class="text-sm text-muted">
-                            {{ new Date(h.created_at).toLocaleString("es-CO") }}
+                            {{ new Date(h.created_at).toLocaleString("es-EC") }}
                         </p>
                     </div></UCard
                 >

@@ -282,7 +282,7 @@ function colorNivel(
                             {{
                                 Number(
                                     consulta.vehiculoDetalle.kilometraje,
-                                ).toLocaleString("es-CO")
+                                ).toLocaleString("es-EC")
                             }}
                             km
                         </p></UCard

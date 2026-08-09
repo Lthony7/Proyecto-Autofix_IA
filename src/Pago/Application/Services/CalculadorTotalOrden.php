@@ -37,7 +37,7 @@ class CalculadorTotalOrden
             'pagado' => (string) $pagado,
             'saldo' => (string) $saldo,
             'estado' => $estado,
-            'moneda' => 'COP',
+            'moneda' => 'USD',
         ];
     }
 }

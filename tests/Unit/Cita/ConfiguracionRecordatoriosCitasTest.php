@@ -12,6 +12,6 @@ final class ConfiguracionRecordatoriosCitasTest extends TestCase
     {
         $this->assertIsBool(config('autofix.appointment_reminders.enabled'));
         $this->assertGreaterThan(0, config('autofix.appointment_reminders.window_minutes'));
-        $this->assertSame('America/Bogota', config('app.timezone'));
+        $this->assertSame('America/Guayaquil', config('app.timezone'));
     }
 }

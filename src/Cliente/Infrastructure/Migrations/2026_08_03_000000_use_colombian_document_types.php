@@ -7,9 +7,10 @@ return new class extends Migration
 {
     public function up(): void
     {
-        DB::table('clientes')->where('tipo_documento', 'DNI')->update(['tipo_documento' => 'CC']);
-        DB::table('clientes')->where('tipo_documento', 'RUC')->update(['tipo_documento' => 'NIT']);
-        DB::statement("ALTER TABLE clientes ADD CONSTRAINT clientes_tipo_documento_check CHECK (tipo_documento IN ('CC', 'CE', 'NIT', 'PASAPORTE'))");
+        DB::table('clientes')->where('tipo_documento', 'DNI')->update(['tipo_documento' => 'CEDULA']);
+        DB::table('clientes')->whereIn('tipo_documento', ['CC', 'CE'])->update(['tipo_documento' => 'CEDULA']);
+        DB::table('clientes')->where('tipo_documento', 'NIT')->update(['tipo_documento' => 'RUC']);
+        DB::statement("ALTER TABLE clientes ADD CONSTRAINT clientes_tipo_documento_check CHECK (tipo_documento IN ('CEDULA', 'RUC', 'PASAPORTE'))");
     }
 
     public function down(): void

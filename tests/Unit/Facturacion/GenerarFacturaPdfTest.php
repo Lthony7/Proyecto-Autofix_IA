@@ -13,17 +13,17 @@ class GenerarFacturaPdfTest extends TestCase
     public function test_genera_pdf_solo_con_la_instantanea_de_la_factura(): void
     {
         $factura = new FacturaOrdenEloquentModel([
-            'numero' => 'FAC-0001', 'version' => 1, 'cliente_tipo_documento' => 'CC',
+            'numero' => 'FAC-0001', 'version' => 1, 'cliente_tipo_documento' => 'CEDULA',
             'cliente_documento' => '123', 'cliente_nombre' => 'Cliente histórico',
             'cliente_direccion' => 'Calle 1', 'cliente_email' => 'historico@example.test',
-            'vehiculo_placa' => 'ABC123', 'subtotal' => '100000.00', 'descuento' => '0.00',
-            'base_impuesto' => '100000.00', 'tasa_impuesto' => '0.00', 'impuesto' => '0.00',
-            'total' => '100000.00', 'moneda' => 'COP', 'estado' => 'emitida',
+            'vehiculo_placa' => 'ABC123', 'subtotal' => '100.00', 'descuento' => '0.00',
+            'base_impuesto' => '100.00', 'tasa_impuesto' => '0.00', 'impuesto' => '0.00',
+            'total' => '100.00', 'moneda' => 'USD', 'estado' => 'emitida',
             'emitida_en' => '2026-08-09 10:00:00',
         ]);
         $factura->setRelation('lineas', collect([new FacturaOrdenLineaEloquentModel([
             'tipo' => 'servicio', 'descripcion' => 'Diagnóstico', 'cantidad' => '1.000',
-            'precio_unitario' => '100000.00', 'subtotal' => '100000.00',
+            'precio_unitario' => '100.00', 'subtotal' => '100.00',
         ])]));
 
         $generador = app(GenerarFacturaPdf::class);

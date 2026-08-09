@@ -3,7 +3,7 @@ import { reactive, ref, computed, watch } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import { route } from 'ziggy-js'
 import type { Cliente } from '../../types'
-import { ayudaDocumento, documentoNumerico, longitudDocumento, normalizarDocumento, normalizarTelefono, tiposDocumentoColombia } from '../../utils/validation'
+import { ayudaDocumento, documentoNumerico, longitudDocumento, normalizarDocumento, normalizarTelefono, tiposDocumentoEcuador } from '../../utils/validation'
 
 const props = defineProps<{
   cliente: Cliente
@@ -75,7 +75,7 @@ const handleCancel = () => {
               <UFormField label="Tipo de Documento" name="tipoDocumento" required :error="errors.tipoDocumento" size="xl" class="w-full">
                 <USelect
                   v-model="state.tipoDocumento"
-                  :items="tiposDocumentoColombia"
+                  :items="tiposDocumentoEcuador"
                   placeholder="Seleccione tipo de documento"
                   size="xl"
                   class="w-full"

@@ -162,13 +162,13 @@ function exportar(tipo: string) {
     });
 }
 function dinero(valor: string | number) {
-    return Number(valor).toLocaleString("es-CO", {
+    return Number(valor).toLocaleString("es-EC", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     });
 }
 function fecha(valor?: string) {
-    return valor ? new Date(valor).toLocaleDateString("es-CO") : "-";
+    return valor ? new Date(valor).toLocaleDateString("es-EC") : "-";
 }
 function estadoColor(
     estado: string,
@@ -511,7 +511,7 @@ function estadoColor(
                                         {{
                                             Number(
                                                 p.stock_actual,
-                                            ).toLocaleString("es-CO")
+                                            ).toLocaleString("es-EC")
                                         }}
                                         {{ p.unidad }}
                                     </td>
@@ -519,7 +519,7 @@ function estadoColor(
                                         {{
                                             Number(
                                                 p.stock_minimo,
-                                            ).toLocaleString("es-CO")
+                                            ).toLocaleString("es-EC")
                                         }}
                                     </td>
                                     <td class="p-3">
@@ -987,7 +987,7 @@ function estadoColor(
                                             {{
                                                 Number(
                                                     p.cantidad,
-                                                ).toLocaleString("es-CO")
+                                                ).toLocaleString("es-EC")
                                             }}
                                             {{ p.unidad }}
                                         </td>

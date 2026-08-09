@@ -772,7 +772,7 @@ class InventarioWebController extends Controller
             ],
             [
                 "documento.required" =>
-                    "El documento o NIT del proveedor es obligatorio.",
+                    "El documento o RUC del proveedor es obligatorio.",
                 "nombre.required" => "El nombre del proveedor es obligatorio.",
                 "email.email" => "Ingresa un correo electrónico válido.",
             ],

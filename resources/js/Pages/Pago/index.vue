@@ -97,7 +97,7 @@ function reembolsar(pago: Pago) {
     );
 }
 function dinero(valor: string) {
-    return Number(valor).toLocaleString("es-CO", {
+    return Number(valor).toLocaleString("es-EC", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     });
@@ -430,7 +430,7 @@ function usarSaldoCompleto() {
                                         {{
                                             new Date(
                                                 p.pagado_en,
-                                            ).toLocaleString("es-CO")
+                                            ).toLocaleString("es-EC")
                                         }}
                                         · Comprobante {{ p.comprobante_numero }}
                                     </p>

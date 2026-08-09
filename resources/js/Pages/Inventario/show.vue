@@ -58,7 +58,7 @@ function filtrar() {
     );
 }
 function numero(v: string, d = 3) {
-    return Number(v).toLocaleString("es-CO", {
+    return Number(v).toLocaleString("es-EC", {
         minimumFractionDigits: d,
         maximumFractionDigits: d,
     });
@@ -209,7 +209,7 @@ function numero(v: string, d = 3) {
                                         {{
                                             new Date(
                                                 m.created_at,
-                                            ).toLocaleString("es-CO")
+                                            ).toLocaleString("es-EC")
                                         }}
                                     </td>
                                     <td class="p-3">

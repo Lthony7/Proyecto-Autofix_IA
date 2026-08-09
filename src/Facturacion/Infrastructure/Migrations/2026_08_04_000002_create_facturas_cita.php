@@ -24,7 +24,7 @@ return new class extends Migration
             $table->decimal('subtotal', 14, 2);
             $table->decimal('impuesto', 14, 2)->default(0);
             $table->decimal('total', 14, 2);
-            $table->char('moneda', 3)->default('COP');
+            $table->char('moneda', 3)->default('USD');
             $table->string('estado', 20)->default('pendiente');
             $table->timestampTz('creada_en');
             $table->foreignUuid('creada_por')->constrained('users')->restrictOnDelete();
@@ -40,7 +40,7 @@ return new class extends Migration
         });
 
         DB::statement("ALTER TABLE facturas_cita ADD CONSTRAINT facturas_cita_estado_check CHECK (estado IN ('pendiente','pagada','anulada'))");
-        DB::statement("ALTER TABLE facturas_cita ADD CONSTRAINT facturas_cita_moneda_check CHECK (moneda = 'COP')");
+        DB::statement("ALTER TABLE facturas_cita ADD CONSTRAINT facturas_cita_moneda_check CHECK (moneda = 'USD')");
         DB::statement('ALTER TABLE facturas_cita ADD CONSTRAINT facturas_cita_valores_check CHECK (subtotal > 0 AND impuesto >= 0 AND total = subtotal + impuesto)');
         DB::statement("ALTER TABLE facturas_cita ADD CONSTRAINT facturas_cita_pago_check CHECK ((estado = 'pendiente' AND pagada_en IS NULL AND pagada_por IS NULL AND metodo_pago IS NULL AND anulada_en IS NULL AND anulada_por IS NULL AND motivo_anulacion IS NULL) OR (estado = 'pagada' AND pagada_en IS NOT NULL AND pagada_por IS NOT NULL AND metodo_pago IS NOT NULL AND anulada_en IS NULL AND anulada_por IS NULL AND motivo_anulacion IS NULL) OR (estado = 'anulada' AND pagada_en IS NULL AND pagada_por IS NULL AND metodo_pago IS NULL AND anulada_en IS NOT NULL AND anulada_por IS NOT NULL AND motivo_anulacion IS NOT NULL))");
     }

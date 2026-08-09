@@ -60,7 +60,7 @@ function toggle(id: string) {
                     <span class="font-medium">{{ registro.recurso_tipo }}</span>
                   </div>
                   <p class="mt-1 text-sm">{{ registro.usuario ? `${registro.usuario.name} · ${registro.usuario.email}` : 'Sistema o usuario eliminado' }}</p>
-                  <p class="text-xs text-muted">{{ new Date(registro.created_at).toLocaleString('es-CO') }} · IP {{ registro.ip || 'no disponible' }}</p>
+                  <p class="text-xs text-muted">{{ new Date(registro.created_at).toLocaleString('es-EC') }} · IP {{ registro.ip || 'no disponible' }}</p>
                   <p v-if="registro.recurso_id" class="mt-1 font-mono text-xs text-muted">{{ registro.recurso_id }}</p>
                 </div>
                 <UButton v-if="registro.cambios" size="xs" color="neutral" variant="ghost" :label="abiertos.has(registro.id) ? 'Ocultar cambios' : 'Ver cambios'" @click="toggle(registro.id)" />

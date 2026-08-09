@@ -16,7 +16,7 @@ final class RecordatorioCita extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    private const ZONA_HORARIA = 'America/Bogota';
+    private const ZONA_HORARIA = 'America/Guayaquil';
 
     public int $tries = 1;
 

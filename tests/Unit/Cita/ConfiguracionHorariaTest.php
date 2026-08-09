@@ -6,8 +6,8 @@ use Tests\TestCase;
 
 class ConfiguracionHorariaTest extends TestCase
 {
-    public function test_el_taller_usa_la_zona_horaria_de_colombia(): void
+    public function test_el_taller_usa_la_zona_horaria_de_ecuador(): void
     {
-        $this->assertSame('America/Bogota', config('app.timezone'));
+        $this->assertSame('America/Guayaquil', config('app.timezone'));
     }
 }

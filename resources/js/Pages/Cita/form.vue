@@ -159,7 +159,7 @@ const camposReporteIa = computed(() => {
 });
 const opcionesFecha = computed(() => {
     if (!mecanico.value) return [];
-    const hoy = fechaActualBogota().fecha;
+    const hoy = fechaActualGuayaquil().fecha;
     const base = new Date(`${hoy}T12:00:00`);
     return Array.from({ length: props.horizonteDias }, (_, i) => {
         const fecha = new Date(base);
@@ -169,7 +169,7 @@ const opcionesFecha = computed(() => {
         return {
             valor,
             cupos,
-            label: `${new Intl.DateTimeFormat("es-CO", { weekday: "short", day: "numeric", month: "short" }).format(fecha)} · ${cupos.length} ${cupos.length === 1 ? "hora disponible" : "horas disponibles"}`,
+            label: `${new Intl.DateTimeFormat("es-EC", { weekday: "short", day: "numeric", month: "short" }).format(fecha)} · ${cupos.length} ${cupos.length === 1 ? "hora disponible" : "horas disponibles"}`,
         };
     })
         .filter((d) => d.cupos.length)
@@ -233,10 +233,10 @@ function desdeMinutos(valor: number) {
 function claveFecha(fecha: Date) {
     return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, "0")}-${String(fecha.getDate()).padStart(2, "0")}`;
 }
-function fechaActualBogota() {
+function fechaActualGuayaquil() {
     const partes = Object.fromEntries(
         new Intl.DateTimeFormat("en-CA", {
-            timeZone: "America/Bogota",
+            timeZone: "America/Guayaquil",
             year: "numeric",
             month: "2-digit",
             day: "2-digit",
@@ -257,7 +257,7 @@ function slotsFecha(fecha: string) {
     if (!mecanico.value) return [];
     const diaFecha = new Date(`${fecha}T12:00:00`);
     const dia = diaFecha.getDay() === 0 ? 7 : diaFecha.getDay();
-    const ahora = fechaActualBogota();
+    const ahora = fechaActualGuayaquil();
     const horarios = mecanico.value.horarios.filter(
         (h) =>
             h.dia === dia &&
@@ -286,14 +286,14 @@ function slotsFecha(fecha: string) {
     return [...resultado].sort();
 }
 function formatoHora(hora: string) {
-    return new Intl.DateTimeFormat("es-CO", {
+    return new Intl.DateTimeFormat("es-EC", {
         hour: "numeric",
         minute: "2-digit",
         hour12: true,
     }).format(new Date(`2000-01-01T${hora}:00`));
 }
 function dinero(valor: string | number) {
-    return Number(valor).toLocaleString("es-CO", {
+    return Number(valor).toLocaleString("es-EC", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     });

@@ -18,11 +18,11 @@ class PublicClientRegistrationTest extends TestCase
     public function test_public_registration_accepts_no_role_from_the_request(): void
     {
         $data = [
-            'tipo_documento' => 'CC',
-            'numero_documento' => '1020304050',
+            'tipo_documento' => 'CEDULA',
+            'numero_documento' => '1028267704',
             'razon_social' => 'Cliente Registrado',
-            'direccion' => 'Calle 10 # 20-30',
-            'telefono' => '3001234567',
+            'direccion' => 'Av. 9 de Octubre y Pedro Carbo',
+            'telefono' => '0987654321',
             'email' => 'cliente.registrado@example.com',
             'password' => 'Cliente2026',
             'password_confirmation' => 'Cliente2026',

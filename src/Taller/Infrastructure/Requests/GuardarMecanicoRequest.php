@@ -2,7 +2,7 @@
 
 namespace Src\Taller\Infrastructure\Requests;
 
-use App\Rules\DocumentoColombiano;
+use App\Rules\DocumentoEcuatoriano;
 use App\Rules\TelefonoEcuatoriano;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -36,8 +36,8 @@ class GuardarMecanicoRequest extends FormRequest
         $id = is_object($mecanico) ? $mecanico->getKey() : $mecanico;
         return [
             'usuario_id' => ['nullable', 'uuid', Rule::exists('users', 'id'), Rule::unique('mecanicos', 'usuario_id')->ignore($id)],
-            'tipo_documento' => ['required', Rule::in(['CC', 'CE', 'PASAPORTE'])],
-            'numero_documento' => ['required', 'string', new DocumentoColombiano((string) $this->input('tipo_documento')), Rule::unique('mecanicos')->ignore($id)],
+            'tipo_documento' => ['required', Rule::in(['CEDULA', 'RUC', 'PASAPORTE'])],
+            'numero_documento' => ['required', 'string', new DocumentoEcuatoriano((string) $this->input('tipo_documento')), Rule::unique('mecanicos')->ignore($id)],
             'nombres' => ['required', 'string', 'max:120'], 'apellidos' => ['required', 'string', 'max:120'],
             'telefono' => ['required', 'string', 'max:13', new TelefonoEcuatoriano],
             'email' => ['required', 'email:rfc', 'max:254', Rule::unique('mecanicos')->ignore($id)],
@@ -65,7 +65,7 @@ class GuardarMecanicoRequest extends FormRequest
     {
         return [
             'tipo_documento.required' => 'Selecciona el tipo de documento del mecánico.',
-            'tipo_documento.in' => 'Selecciona CC, CE o PASAPORTE como tipo de documento.',
+            'tipo_documento.in' => 'Selecciona CÉDULA, RUC o PASAPORTE como tipo de documento.',
             'numero_documento.required' => 'El número de documento es obligatorio.',
             'numero_documento.unique' => 'Este número de documento ya está registrado.',
             'nombres.required' => 'Los nombres son obligatorios.',

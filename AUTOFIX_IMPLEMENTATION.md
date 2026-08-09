@@ -145,7 +145,7 @@ La integración se configura mediante `GROQ_ENABLED`, `GROQ_API_KEY`, `GROQ_API_
 
 - El total canónico se calcula en Laravel desde los precios históricos de servicios y repuestos; el navegador nunca define el total ni el saldo.
 - Los servicios cancelados y los consumos de repuestos revertidos no forman parte del total.
-- Los pagos se vinculan directamente a la orden, usan moneda `COP` y permiten efectivo, tarjeta, transferencia u otro método.
+- Los pagos se vinculan directamente a la orden, usan moneda `USD` y permiten efectivo, tarjeta, transferencia u otro método.
 - Se admiten pagos parciales y el estado financiero derivado puede ser pendiente, parcial o pagado.
 - El registro bloquea la orden con `FOR UPDATE`, recalcula el saldo dentro de la transacción e impide sobrepagos concurrentes.
 - Cada pago genera números únicos de operación y comprobante, además de un evento financiero inmutable.
@@ -286,7 +286,7 @@ Verificación manual:
 - La orden muestra el diagnóstico IA vigente, su revisión humana y accesos condicionados por permisos a IA y calendario.
 - El mecánico asignado a la cita o a la orden puede revisar la consulta; una sugerencia inicial deja de conceder acceso cuando existe una asignación operativa distinta.
 - Una orden no puede entrar en reparación, completar servicios ni consumir repuestos sin diagnóstico técnico humano vigente; si tiene IA vinculada, esta debe estar confirmada o modificada.
-- Las citas se interpretan en `America/Bogota`, validan disponibilidad nuevamente al confirmar y no pueden marcarse atendidas antes de comenzar o sin mecánico.
+- Las citas se interpretan en `America/Guayaquil`, validan disponibilidad nuevamente al confirmar y no pueden marcarse atendidas antes de comenzar o sin mecánico.
 - La orden existe desde que se agenda la cita y aparece de inmediato al mecánico asignado; cualquier reintento abre la misma orden sin duplicarla.
 - Después de entregar el vehículo no se permite anular o reembolsar pagos ni anular la factura, conservando el cierre financiero verificado.
 - Inventario presenta conteos reales de referencias normales, bajas y agotadas, además de movimientos con saldo anterior y resultante.
@@ -308,7 +308,7 @@ Verificación manual:
 ### Fase 18: comunicaciones, documentos y accesibilidad
 
 - La recuperación de contraseña usa el broker de Laravel, respuestas contra enumeración de cuentas, enlaces con vencimiento y revocación de sesiones y tokens al completar el cambio.
-- Los recordatorios de citas por correo son configurables, se seleccionan en `America/Bogota` y conservan un registro idempotente por cita, fecha programada y canal.
+- Los recordatorios de citas por correo son configurables, se seleccionan en `America/Guayaquil` y conservan un registro idempotente por cita, fecha programada y canal.
 - Facturas y comprobantes se generan como PDF en el servidor desde instantáneas financieras y pueden enviarse únicamente al correo congelado en la factura.
 - Los permisos `facturas.enviar` y `pagos.enviar` separan la consulta del envío externo de documentos.
 - Playwright cubre autenticación pública, protección de rutas y un escenario autenticado opcional mediante credenciales de prueba.

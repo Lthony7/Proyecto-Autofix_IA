@@ -67,7 +67,7 @@ class GestionarPago
                 'comprobante_numero' => $this->consecutivos->siguiente('comprobante_pago', 'RC'),
                 'orden_id' => $bloqueada->id, 'factura_id' => $factura->id,
                 'idempotencia_clave' => $datos['idempotencia_clave'], 'solicitud_hash' => $hash,
-                'monto' => (string) $monto, 'moneda' => 'COP', 'metodo' => $datos['metodo'],
+                'monto' => (string) $monto, 'moneda' => 'USD', 'metodo' => $datos['metodo'],
                 'referencia' => $datos['referencia'] ?? null, 'observaciones' => $datos['observaciones'] ?? null,
                 'estado' => 'registrado', 'pagado_en' => $pagadoEn, 'registrado_por' => $usuarioId,
                 'factura_numero_snapshot' => $factura->numero, 'orden_numero_snapshot' => $bloqueada->numero,

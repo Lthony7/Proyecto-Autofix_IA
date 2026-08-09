@@ -365,7 +365,7 @@ function enviar() {
                                     required
                                     :hint="
                                         vehiculo
-                                            ? `Último registrado: ${vehiculo.kilometraje.toLocaleString('es-CO')} km`
+                                            ? `Último registrado: ${vehiculo.kilometraje.toLocaleString('es-EC')} km`
                                             : undefined
                                     "
                                     :error="errors.kilometraje"

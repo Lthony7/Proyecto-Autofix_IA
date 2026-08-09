@@ -86,17 +86,17 @@ final class EncolarRecordatoriosCitasTest extends TestCase
         Notification::fake();
         config()->set('autofix.appointment_reminders.enabled', true);
         config()->set('autofix.appointment_reminders.window_minutes', 120);
-        $ahora = CarbonImmutable::parse('2099-08-09 08:00:00', 'America/Bogota');
+        $ahora = CarbonImmutable::parse('2099-08-09 08:00:00', 'America/Guayaquil');
         CarbonImmutable::setTestNow($ahora);
 
         DB::table('clientes')->insert([
             'id' => '10000000-0000-4000-8000-000000000001',
             ...($this->usaPostgres ? [
-                'tipo_documento' => 'CC',
+                'tipo_documento' => 'CEDULA',
                 'numero_documento' => '1000000001',
                 'razon_social' => 'Cliente de recordatorios',
                 'direccion' => 'Dirección de prueba',
-                'telefono' => '3000000001',
+                'telefono' => '0990000001',
             ] : []),
             'email' => 'cliente@example.com',
             'created_at' => $ahora,

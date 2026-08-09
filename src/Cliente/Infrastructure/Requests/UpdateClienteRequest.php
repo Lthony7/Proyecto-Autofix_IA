@@ -2,7 +2,7 @@
 
 namespace Src\Cliente\Infrastructure\Requests;
 
-use App\Rules\DocumentoColombiano;
+use App\Rules\DocumentoEcuatoriano;
 use App\Rules\TelefonoEcuatoriano;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -34,8 +34,8 @@ class UpdateClienteRequest extends FormRequest
         $clienteId = $this->route('id') ?? $this->route('cliente');
 
         return [
-            'tipo_documento' => ['required', Rule::in(['CC', 'CE', 'NIT', 'PASAPORTE'])],
-            'numero_documento' => ['required', 'string', new DocumentoColombiano((string) $this->input('tipo_documento')), Rule::unique('clientes', 'numero_documento')->ignore($clienteId)],
+            'tipo_documento' => ['required', Rule::in(['CEDULA', 'RUC', 'PASAPORTE'])],
+            'numero_documento' => ['required', 'string', new DocumentoEcuatoriano((string) $this->input('tipo_documento')), Rule::unique('clientes', 'numero_documento')->ignore($clienteId)],
             'razon_social' => 'required|string|max:255',
             'direccion' => 'required|string|max:255',
             'telefono' => ['required', 'string', 'max:13', new TelefonoEcuatoriano],
@@ -59,7 +59,7 @@ class UpdateClienteRequest extends FormRequest
     {
         return [
             'tipo_documento.required' => 'El tipo de documento es obligatorio',
-            'tipo_documento.in' => 'Selecciona CC, CE, NIT o PASAPORTE como tipo de documento',
+            'tipo_documento.in' => 'Selecciona CÉDULA, RUC o PASAPORTE como tipo de documento',
             'numero_documento.required' => 'El número de documento es obligatorio',
             'numero_documento.unique' => 'Este número de documento ya está registrado',
             'razon_social.required' => 'La razón social es obligatoria',

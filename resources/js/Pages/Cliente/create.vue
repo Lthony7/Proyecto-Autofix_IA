@@ -9,12 +9,12 @@ import {
     longitudDocumento,
     normalizarDocumento,
     normalizarTelefono,
-    tiposDocumentoColombia,
+    tiposDocumentoEcuador,
 } from "../../utils/validation";
 
 // Estado del formulario
 const state = reactive({
-    tipoDocumento: "CC",
+    tipoDocumento: "CEDULA",
     numeroDocumento: "",
     razonSocial: "",
     direccion: "",
@@ -96,7 +96,7 @@ const handleCancel = () => {
                                 <USelect
                                     v-bind="fieldAttrs"
                                     v-model="state.tipoDocumento"
-                                    :items="tiposDocumentoColombia"
+                                    :items="tiposDocumentoEcuador"
                                     placeholder="Seleccione tipo de documento"
                                     size="xl"
                                     class="w-full"

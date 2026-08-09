@@ -4,12 +4,12 @@ import { Head, router, usePage } from '@inertiajs/vue3'
 import { route } from 'ziggy-js'
 import AutofixLogo from '../../components/AutofixLogo.vue'
 import FormField from '../../components/FormField.vue'
-import { ayudaDocumento, documentoNumerico, longitudDocumento, normalizarDocumento, normalizarTelefono, tiposDocumentoColombia } from '../../utils/validation'
+import { ayudaDocumento, documentoNumerico, longitudDocumento, normalizarDocumento, normalizarTelefono, tiposDocumentoEcuador } from '../../utils/validation'
 
 defineOptions({ layout: null })
 
 const state = reactive({
-  tipoDocumento: 'CC',
+  tipoDocumento: 'CEDULA',
   numeroDocumento: '',
   razonSocial: '',
   direccion: '',
@@ -56,7 +56,7 @@ function handleSubmit() {
         <form class="grid gap-5 md:grid-cols-2" @submit.prevent="handleSubmit">
           <FormField label="Tipo de documento" name="tipoDocumento" required :error="errors.tipoDocumento">
             <template #default="{ fieldAttrs }">
-              <USelect v-bind="fieldAttrs" v-model="state.tipoDocumento" :items="tiposDocumentoColombia" class="w-full" size="xl" />
+              <USelect v-bind="fieldAttrs" v-model="state.tipoDocumento" :items="tiposDocumentoEcuador" class="w-full" size="xl" />
             </template>
           </FormField>
 

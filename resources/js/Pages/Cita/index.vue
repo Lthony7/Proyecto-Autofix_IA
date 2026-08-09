@@ -40,11 +40,11 @@ let solicitudDisponibilidad = 0
 const errors = computed<Record<string,string>>(() => usePage().props.errors as Record<string,string>)
 const opcionesFecha = computed(() => fechasDisponibles.value.map(item => ({
   value: item.value,
-  label: `${new Intl.DateTimeFormat('es-CO', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(`${item.value}T12:00:00`))} · ${item.horas.length} ${item.horas.length === 1 ? 'hora disponible' : 'horas disponibles'}`
+  label: `${new Intl.DateTimeFormat('es-EC', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(`${item.value}T12:00:00`))} · ${item.horas.length} ${item.horas.length === 1 ? 'hora disponible' : 'horas disponibles'}`
 })))
 const opcionesHora = computed(() => (fechasDisponibles.value.find(item => item.value === form.fecha)?.horas ?? []).map(hora => ({
   value: hora,
-  label: `${new Intl.DateTimeFormat('es-CO', { hour: 'numeric', minute: '2-digit', hour12: true }).format(new Date(`2000-01-01T${hora}:00`))} · Disponible (${duracionMinutos.value} min)`
+  label: `${new Intl.DateTimeFormat('es-EC', { hour: 'numeric', minute: '2-digit', hour12: true }).format(new Date(`2000-01-01T${hora}:00`))} · Disponible (${duracionMinutos.value} min)`
 })))
 const estados = [{ label: 'Todos', value: 'todos' }, ...['pendiente', 'confirmada', 'reprogramada', 'vencida', 'atendida', 'cancelada'].map(value => ({ label: value, value }))]
 function filtrar() {
@@ -105,7 +105,7 @@ function guardarModal() {
   router.patch(route('citas.estado', seleccionada.value.id), { estado: accion.value, ...form }, { preserveScroll: true, onSuccess: () => { modal.value = false } })
 }
 function fecha(valor: string) {
-  return new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(valor))
+  return new Intl.DateTimeFormat('es-EC', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(valor))
 }
 function colorEstado(estado: string): 'error'|'success'|'warning'|'primary'|'neutral' {
   if (['cancelada', 'vencida'].includes(estado)) return 'error'

@@ -1,7 +1,6 @@
-export const tiposDocumentoColombia = [
-  { label: 'Cédula de ciudadanía', value: 'CC' },
-  { label: 'Cédula de extranjería', value: 'CE' },
-  { label: 'NIT', value: 'NIT' },
+export const tiposDocumentoEcuador = [
+  { label: 'Cédula', value: 'CEDULA' },
+  { label: 'RUC', value: 'RUC' },
   { label: 'Pasaporte', value: 'PASAPORTE' }
 ]
 
@@ -10,15 +9,15 @@ export function documentoNumerico(tipo: string) {
 }
 
 export function longitudDocumento(tipo: string) {
-  if (tipo === 'NIT') return 10
+  if (tipo === 'RUC') return 13
   if (tipo === 'PASAPORTE') return 20
   return 10
 }
 
 export function ayudaDocumento(tipo: string) {
-  if (tipo === 'NIT') return '9 dígitos más el dígito de verificación, sin puntos ni guion.'
+  if (tipo === 'RUC') return '13 dígitos, sin puntos ni guiones. Para persona natural, los 10 primeros dígitos corresponden a su cédula.'
   if (tipo === 'PASAPORTE') return 'Entre 5 y 20 letras o números.'
-  return 'Entre 6 y 10 dígitos.'
+  return '10 dígitos.'
 }
 
 export function normalizarDocumento(value: string, tipo: string) {

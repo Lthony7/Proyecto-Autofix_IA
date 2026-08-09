@@ -44,7 +44,7 @@ const props = defineProps<{
 const { can } = usePermissions();
 const enviando = ref(false);
 function dinero(v: string) {
-    return Number(v).toLocaleString("es-CO", {
+    return Number(v).toLocaleString("es-EC", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     });
@@ -128,7 +128,7 @@ function enviarCorreo() {
                             <p class="text-sm">
                                 {{
                                     new Date(pago.pagado_en).toLocaleString(
-                                        "es-CO",
+                                        "es-EC",
                                     )
                                 }}
                             </p>

@@ -17,7 +17,7 @@ final class VentanaRecordatorioCitasTest extends TestCase
         int $desplazamientoMinutos,
         bool $esperado,
     ): void {
-        $ahora = CarbonImmutable::parse('2026-08-09 08:00:00', 'America/Bogota');
+        $ahora = CarbonImmutable::parse('2026-08-09 08:00:00', 'America/Guayaquil');
 
         $this->assertSame(
             $esperado,

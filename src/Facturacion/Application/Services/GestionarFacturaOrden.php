@@ -53,7 +53,7 @@ class GestionarFacturaOrden
                 'descuento_autorizado_por' => $descuento->isZero() ? null : ($datos['descuento_autorizado_por'] ?? null),
                 'descuento_autorizado_en' => $descuento->isZero() ? null : ($datos['descuento_autorizado_en'] ?? null),
                 'base_impuesto' => (string) $base, 'tasa_impuesto' => (string) $tasa,
-                'impuesto' => (string) $impuesto, 'total' => (string) $total, 'moneda' => 'COP', 'estado' => 'emitida', 'emitida_en' => now(),
+                'impuesto' => (string) $impuesto, 'total' => (string) $total, 'moneda' => 'USD', 'estado' => 'emitida', 'emitida_en' => now(),
                 'vence_en' => $datos['vence_en'] ?? null, 'observaciones' => $datos['observaciones'] ?? null, 'emitida_por' => $usuarioId,
             ]);
             foreach ($lineas as $linea) FacturaOrdenLineaEloquentModel::create([...$linea, 'factura_id' => $factura->id]);

@@ -45,7 +45,7 @@ return new class extends Migration
             $table->foreignUuid('orden_id')->constrained('ordenes_trabajo')->restrictOnDelete();
             $table->string('tipo', 20);
             $table->decimal('monto', 14, 2);
-            $table->char('moneda', 3)->default('COP');
+            $table->char('moneda', 3)->default('USD');
             $table->string('metodo', 30);
             $table->string('referencia', 120)->nullable();
             $table->timestampTz('ocurrido_en');
@@ -58,7 +58,7 @@ return new class extends Migration
         });
         DB::statement("ALTER TABLE pago_movimientos ADD CONSTRAINT pago_movimientos_tipo_check CHECK (tipo IN ('ingreso','anulacion','reembolso'))");
         DB::statement("ALTER TABLE pago_movimientos ADD CONSTRAINT pago_movimientos_signo_check CHECK ((tipo = 'ingreso' AND monto > 0) OR (tipo IN ('anulacion','reembolso') AND monto < 0))");
-        DB::statement("ALTER TABLE pago_movimientos ADD CONSTRAINT pago_movimientos_moneda_check CHECK (moneda = 'COP')");
+        DB::statement("ALTER TABLE pago_movimientos ADD CONSTRAINT pago_movimientos_moneda_check CHECK (moneda = 'USD')");
         DB::statement('ALTER TABLE pagos ADD CONSTRAINT pagos_idempotencia_check CHECK ((idempotencia_clave IS NULL AND solicitud_hash IS NULL) OR (idempotencia_clave IS NOT NULL AND solicitud_hash IS NOT NULL))');
         DB::statement('ALTER TABLE pagos ADD CONSTRAINT pagos_snapshot_calculo_check CHECK (idempotencia_clave IS NULL OR (factura_id IS NOT NULL AND factura_numero_snapshot IS NOT NULL AND orden_numero_snapshot IS NOT NULL AND cliente_nombre_snapshot IS NOT NULL AND vehiculo_placa_snapshot IS NOT NULL AND total_orden_snapshot IS NOT NULL AND pagado_acumulado_snapshot IS NOT NULL AND saldo_resultante_snapshot IS NOT NULL AND saldo_resultante_snapshot = total_orden_snapshot - pagado_acumulado_snapshot))');
 

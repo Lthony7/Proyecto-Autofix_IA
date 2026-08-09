@@ -101,7 +101,7 @@ function filtrar() {
                 <p class="text-sm font-semibold text-primary">{{ o.numero }}</p>
                 <h2 class="font-semibold">{{ o.vehiculo }} · {{ o.cliente }}</h2>
                 <dl class="mt-3 grid gap-x-6 gap-y-2 text-sm md:grid-cols-2">
-                  <div><dt class="text-muted">Recibida</dt><dd>{{ new Date(o.recibidaEn).toLocaleString('es-CO') }}</dd></div>
+                  <div><dt class="text-muted">Recibida</dt><dd>{{ new Date(o.recibidaEn).toLocaleString('es-EC') }}</dd></div>
                   <div><dt class="text-muted">Mecánicos</dt><dd>{{ o.mecanicos.join(', ') || 'Sin asignar' }}</dd></div>
                 </dl>
               </div>

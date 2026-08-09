@@ -7,13 +7,8 @@ use Tests\TestCase;
 
 class ExampleTest extends TestCase
 {
-    /**
-     * A basic test example.
-     */
-    public function test_the_application_requires_authentication(): void
+    public function test_root_shows_the_public_welcome_portal(): void
     {
-        $response = $this->get('/');
-
-        $response->assertRedirect(route('login'));
+        $this->get('/')->assertOk();
     }
 }

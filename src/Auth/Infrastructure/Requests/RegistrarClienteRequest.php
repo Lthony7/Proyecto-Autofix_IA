@@ -2,7 +2,7 @@
 
 namespace Src\Auth\Infrastructure\Requests;
 
-use App\Rules\DocumentoColombiano;
+use App\Rules\DocumentoEcuatoriano;
 use App\Rules\TelefonoEcuatoriano;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -33,8 +33,8 @@ class RegistrarClienteRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'tipo_documento' => ['required', Rule::in(['CC', 'CE', 'NIT', 'PASAPORTE'])],
-            'numero_documento' => ['required', 'string', new DocumentoColombiano((string) $this->input('tipo_documento')), Rule::unique('clientes', 'numero_documento')],
+            'tipo_documento' => ['required', Rule::in(['CEDULA', 'RUC', 'PASAPORTE'])],
+            'numero_documento' => ['required', 'string', new DocumentoEcuatoriano((string) $this->input('tipo_documento')), Rule::unique('clientes', 'numero_documento')],
             'razon_social' => ['required', 'string', 'max:255'],
             'direccion' => ['required', 'string', 'max:255'],
             'telefono' => ['required', 'string', 'max:13', new TelefonoEcuatoriano],
