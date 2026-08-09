@@ -10,11 +10,11 @@ return new class extends Migration
         if (DB::connection()->getDriverName() !== 'pgsql') return;
 
         // Tipos de documento: migrar datos históricos colombianos a ecuatorianos.
+        // Primero se retira la restricción, luego se normalizan los datos y se agrega la nueva.
+        DB::statement('ALTER TABLE clientes DROP CONSTRAINT IF EXISTS clientes_tipo_documento_check');
         DB::table('clientes')->where('tipo_documento', 'DNI')->update(['tipo_documento' => 'CEDULA']);
         DB::table('clientes')->whereIn('tipo_documento', ['CC', 'CE'])->update(['tipo_documento' => 'CEDULA']);
         DB::table('clientes')->where('tipo_documento', 'NIT')->update(['tipo_documento' => 'RUC']);
-
-        DB::statement('ALTER TABLE clientes DROP CONSTRAINT IF EXISTS clientes_tipo_documento_check');
         DB::statement("ALTER TABLE clientes ADD CONSTRAINT clientes_tipo_documento_check CHECK (tipo_documento IN ('CEDULA', 'RUC', 'PASAPORTE'))");
 
         // Moneda: convertir COP a USD en las tablas que ya tienen restricciones.
