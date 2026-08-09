@@ -36,4 +36,5 @@ Route::middleware('auth')->group(function () {
     Route::put('/usuarios/{usuario}', [UserWebController::class, 'update'])->name('usuarios.update')->middleware('permission:usuarios.editar');
     Route::patch('/usuarios/{usuario}/roles', [UserWebController::class, 'roles'])->name('usuarios.roles')->middleware('permission:roles.administrar');
     Route::patch('/usuarios/{usuario}/estado', [UserWebController::class, 'estado'])->name('usuarios.estado')->middleware('permission:usuarios.desactivar');
+    Route::delete('/usuarios/{usuario}', [UserWebController::class, 'eliminar'])->name('usuarios.eliminar')->middleware('permission:usuarios.eliminar');
 });
