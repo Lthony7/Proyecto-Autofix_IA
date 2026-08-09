@@ -6,7 +6,7 @@
     "keywords": ["laravel", "taller", "automotriz", "inertia", "vue"],
     "license": "MIT",
     "require": {
-        "php": "^8.2",
+        "php": "^8.4",
         "brick/math": "^0.14",
         "dompdf/dompdf": "^3.1.6",
         "inertiajs/inertia-laravel": "^2.0",
