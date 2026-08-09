@@ -52,4 +52,37 @@ class GeneradorDiagnosticoInicialTest extends TestCase
         $this->assertSame('groq', $resultado['meta']['proveedor_intentado']);
         $this->assertSame('con_precaucion', $resultado['respuesta']['puede_circular']);
     }
+
+    public function test_el_proveedor_no_puede_reemplazar_la_advertencia_obligatoria(): void
+    {
+        config(['services.groq.enabled' => false]);
+        $entrada = [
+            'categoria_falla' => 'motor',
+            'sintoma_principal' => 'El motor presenta una vibración intermitente.',
+            'puede_circular' => 'si',
+            'urgencia_percibida' => 'media',
+        ];
+        $respuestaProveedor = app(GeneradorDiagnosticoInicial::class)->generar($entrada)['respuesta'];
+        $respuestaProveedor['advertencia'] = 'Este resultado no requiere revisión humana.';
+
+        config([
+            'services.groq.enabled' => true,
+            'services.groq.key' => 'test-key',
+            'services.groq.model' => 'test-model',
+            'services.groq.url' => 'https://groq.test',
+            'services.groq.timeout' => 2,
+        ]);
+        Http::fake(['groq.test/*' => Http::response([
+            'choices' => [[
+                'message' => ['content' => json_encode($respuestaProveedor, JSON_THROW_ON_ERROR)],
+                'finish_reason' => 'stop',
+            ]],
+            'usage' => ['prompt_tokens' => 10, 'completion_tokens' => 20],
+        ], 200)]);
+
+        $resultado = app(GeneradorDiagnosticoInicial::class)->generar($entrada);
+
+        $this->assertFalse($resultado['meta']['simulada']);
+        $this->assertSame(GeneradorDiagnosticoInicial::ADVERTENCIA, $resultado['respuesta']['advertencia']);
+    }
 }

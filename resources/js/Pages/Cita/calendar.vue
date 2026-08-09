@@ -43,6 +43,7 @@ const estados = [
   { label: 'Pendientes', value: 'pendiente' },
   { label: 'Confirmadas', value: 'confirmada' },
   { label: 'Reprogramadas', value: 'reprogramada' },
+  { label: 'Vencidas', value: 'vencida' },
   { label: 'Atendidas', value: 'atendida' },
   { label: 'Canceladas', value: 'cancelada' }
 ]
@@ -77,7 +78,8 @@ const resumen = computed(() => ({
   total: props.citas.length,
   pendientes: props.citas.filter(cita => cita.estado === 'pendiente').length,
   confirmadas: props.citas.filter(cita => ['confirmada', 'reprogramada'].includes(cita.estado)).length,
-  atendidas: props.citas.filter(cita => cita.estado === 'atendida').length
+  atendidas: props.citas.filter(cita => cita.estado === 'atendida').length,
+  vencidas: props.citas.filter(cita => cita.estado === 'vencida').length
 }))
 
 function fechaLocal(valor: string) {
@@ -150,7 +152,7 @@ function cambiarEstadoCita(estado:string){
   router.patch(route('citas.estado',seleccionada.value.id),datos,{preserveScroll:true,onSuccess:()=>{seleccionada.value=null}})
 }
 function colorEstado(estado: string): 'error'|'success'|'warning'|'primary'|'neutral' {
-  if (estado === 'cancelada') return 'error'
+  if (['cancelada', 'vencida'].includes(estado)) return 'error'
   if (estado === 'atendida') return 'success'
   if (estado === 'pendiente') return 'warning'
   if (estado === 'reprogramada') return 'neutral'
@@ -162,7 +164,8 @@ function claseCita(estado: string) {
     confirmada: 'border-l-primary bg-primary/7 hover:bg-primary/12',
     reprogramada: 'border-l-violet-500 bg-violet-500/7 hover:bg-violet-500/12',
     atendida: 'border-l-success bg-success/7 hover:bg-success/12',
-    cancelada: 'border-l-error bg-error/7 opacity-65 hover:bg-error/12'
+    cancelada: 'border-l-error bg-error/7 opacity-65 hover:bg-error/12',
+    vencida: 'border-l-error bg-error/12 text-error hover:bg-error/18'
   }[estado] ?? 'border-l-default bg-default/70'
 }
 </script>
@@ -200,13 +203,14 @@ function claseCita(estado: string) {
             </div>
           </div>
 
-          <div class="grid gap-3 border-t border-default/70 p-4 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_auto_auto_auto_auto]">
+          <div class="grid gap-3 border-t border-default/70 p-4 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_auto_auto_auto_auto_auto]">
             <USelect v-model="filtros.mecanico" :items="[{ label: 'Todos los mecánicos', value: 'todos' }, ...mecanicos]" icon="i-lucide-hard-hat" @update:model-value="consultar()" />
             <USelect v-model="filtros.estado" :items="estados" icon="i-lucide-list-filter" @update:model-value="consultar()" />
             <div class="rounded-lg border border-default bg-default/55 px-3 py-2"><p class="text-[10px] uppercase text-muted">Total</p><p class="font-mono text-lg font-bold">{{ resumen.total }}</p></div>
             <div class="rounded-lg border border-warning/20 bg-warning/5 px-3 py-2"><p class="text-[10px] uppercase text-warning">Pendientes</p><p class="font-mono text-lg font-bold">{{ resumen.pendientes }}</p></div>
             <div class="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2"><p class="text-[10px] uppercase text-primary">Confirmadas</p><p class="font-mono text-lg font-bold">{{ resumen.confirmadas }}</p></div>
             <div class="rounded-lg border border-success/20 bg-success/5 px-3 py-2"><p class="text-[10px] uppercase text-success">Atendidas</p><p class="font-mono text-lg font-bold">{{ resumen.atendidas }}</p></div>
+            <div class="rounded-lg border border-error/30 bg-error/10 px-3 py-2"><p class="text-[10px] uppercase text-error">Vencidas</p><p class="font-mono text-lg font-bold text-error">{{ resumen.vencidas }}</p></div>
           </div>
         </section>
 
@@ -275,6 +279,6 @@ function claseCita(estado: string) {
         <div><p class="text-sm text-muted">Motivo</p><p class="mt-1 text-sm leading-6">{{ seleccionada.motivo }}</p></div>
       </div>
     </template>
-    <template #footer><div class="flex w-full flex-wrap justify-end gap-2"><UButton v-if="seleccionada&&!['confirmada','atendida','cancelada'].includes(seleccionada.estado)&&can('citas.gestionar')" label="Confirmar" icon="i-lucide-check" color="primary" variant="soft" @click="cambiarEstadoCita('confirmada')"/><UButton v-if="seleccionada?.estado==='confirmada'&&can('citas.gestionar')" label="Marcar atendida" icon="i-lucide-circle-check" color="success" variant="soft" @click="cambiarEstadoCita('atendida')"/><UButton v-if="seleccionada&&!['atendida','cancelada'].includes(seleccionada.estado)&&can('citas.cancelar')" label="Cancelar cita" icon="i-lucide-calendar-x" color="error" variant="ghost" @click="cambiarEstadoCita('cancelada')"/><UButton v-if="seleccionada?.estado==='atendida'&&!seleccionada.ordenId&&can('ordenes.crear')" label="Crear orden" icon="i-lucide-clipboard-plus" @click="router.post(route('citas.convertir-orden',seleccionada.id))"/><UButton v-if="seleccionada?.ordenId&&can('ordenes.ver')" :label="seleccionada.ordenNumero||'Ver orden'" icon="i-lucide-clipboard-list" color="neutral" variant="outline" @click="router.visit(route('ordenes.show',seleccionada.ordenId))"/><UButton label="Cerrar" color="neutral" variant="outline" @click="seleccionada = null" /></div></template>
+    <template #footer><div class="flex w-full flex-wrap justify-end gap-2"><UButton v-if="seleccionada&&['pendiente','reprogramada'].includes(seleccionada.estado)&&can('citas.gestionar')" label="Confirmar" icon="i-lucide-check" color="primary" variant="soft" @click="cambiarEstadoCita('confirmada')"/><UButton v-if="seleccionada&&['confirmada','vencida'].includes(seleccionada.estado)&&can('citas.gestionar')" label="Marcar atendida" icon="i-lucide-circle-check" color="success" variant="soft" @click="cambiarEstadoCita('atendida')"/><UButton v-if="seleccionada&&!['atendida','cancelada'].includes(seleccionada.estado)&&can('citas.cancelar')" label="Cancelar cita" icon="i-lucide-calendar-x" color="error" variant="ghost" @click="cambiarEstadoCita('cancelada')"/><UButton v-if="seleccionada?.estado==='vencida'&&can('citas.gestionar')" label="Reprogramar en lista" icon="i-lucide-calendar-sync" color="neutral" variant="outline" @click="router.visit(route('citas.index',{estado:'vencida'}))"/><UButton v-if="seleccionada?.estado==='atendida'&&!seleccionada.ordenId&&can('ordenes.crear')" label="Crear orden" icon="i-lucide-clipboard-plus" @click="router.post(route('citas.convertir-orden',seleccionada.id))"/><UButton v-if="seleccionada?.ordenId&&can('ordenes.ver')" :label="seleccionada.ordenNumero||'Ver orden'" icon="i-lucide-clipboard-list" color="neutral" variant="outline" @click="router.visit(route('ordenes.show',seleccionada.ordenId))"/><UButton label="Cerrar" color="neutral" variant="outline" @click="seleccionada = null" /></div></template>
   </UModal>
 </template>

@@ -44,6 +44,10 @@ class VehiculoEloquentModel extends Model
 
     public function scopeVisiblePara(Builder $query, UserEloquentModel $usuario): Builder
     {
+        if ($usuario->hasRole('Administrador')) {
+            return $query;
+        }
+
         if ($usuario->hasRole('Cliente')) {
             return $query->whereHas('cliente', fn (Builder $q) => $q->where('usuario_id', $usuario->id));
         }

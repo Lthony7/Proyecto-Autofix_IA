@@ -5,6 +5,7 @@ use Brick\Math\BigDecimal;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -24,7 +25,9 @@ use Src\OrdenTrabajo\Infrastructure\Models\OrdenTrabajoEloquentModel;
 use App\Rules\TelefonoColombiano;
 use Src\Pago\Application\Services\CalculadorTotalOrden;
 use Src\OrdenTrabajo\Application\Services\ValidarPreparacionTrabajo;
+use Src\OrdenTrabajo\Application\Services\AutorizarMecanicoOrden;
 use Src\OrdenTrabajo\Infrastructure\Models\OrdenRepuestoRequeridoEloquentModel;
+use Src\HistorialVehicular\Application\Services\RegistrarEventoVehiculo;
 class InventarioWebController extends Controller
 {
     public function index(Request $request): Response
@@ -432,7 +435,9 @@ class InventarioWebController extends Controller
         RegistrarMovimientoInventario $s,
         ValidarPreparacionTrabajo $preparacion,
         RegistrarAuditoria $a,
+        RegistrarEventoVehiculo $historial,
     ): RedirectResponse {
+        return $this->procesarUsoOrden($r, $orden, $s, $preparacion, $a, $historial);
         $this->autorizarOrden($r, $orden);
         $preparacion->validar($orden->id);
         $uso = DB::transaction(function () use ($r, $orden, $s) {
@@ -455,16 +460,14 @@ class InventarioWebController extends Controller
                 ->where("estado", "activo")
                 ->lockForUpdate()
                 ->firstOrFail();
-            $requerimiento = $r->validated("requerimiento_id")
-                ? OrdenRepuestoRequeridoEloquentModel::whereKey(
+            $requerimiento = OrdenRepuestoRequeridoEloquentModel::whereKey(
                     $r->validated("requerimiento_id"),
                 )
                     ->where("orden_id", $bloqueada->id)
                     ->where("estado", "<>", "retirado")
                     ->lockForUpdate()
-                    ->first()
-                : null;
-            if ($r->validated("requerimiento_id") && !$requerimiento) {
+                    ->first();
+            if (!$requerimiento) {
                 throw ValidationException::withMessages([
                     "requerimientoId" =>
                         "El requerimiento no pertenece a esta orden.",
@@ -480,14 +483,12 @@ class InventarioWebController extends Controller
                         "El repuesto no coincide con el requerimiento seleccionado.",
                 ]);
             }
-            if (
-                $requerimiento &&
-                (float) $r->validated("cantidad") >
-                    (float) $requerimiento->cantidad
-            ) {
+            $usada = (string) OrdenRepuestoEloquentModel::where('requerimiento_id', $requerimiento->id)->whereNull('revertido_en')->sum('cantidad');
+            $restante = BigDecimal::of((string) $requerimiento->cantidad)->minus(BigDecimal::of($usada));
+            if (BigDecimal::of((string) $r->validated("cantidad"))->isGreaterThan($restante)) {
                 throw ValidationException::withMessages([
                     "cantidad" =>
-                        "La cantidad utilizada supera la cantidad requerida.",
+                        "La cantidad utilizada supera el saldo requerido ({$restante}).",
                 ]);
             }
             if ($requerimiento && !$requerimiento->repuesto_id) {
@@ -518,6 +519,9 @@ class InventarioWebController extends Controller
                 "requerimiento_id" => $requerimiento?->id,
                 "cantidad" => $r->validated("cantidad"),
                 "precio_unitario" => $p->precio_venta,
+                "codigo_snapshot" => $p->codigo,
+                "nombre_snapshot" => $p->nombre,
+                "unidad_snapshot" => $p->unidad,
                 "movimiento_salida_id" => $m->id,
                 "registrado_por" => $r->user()->id,
             ]);
@@ -540,7 +544,9 @@ class InventarioWebController extends Controller
         RegistrarMovimientoInventario $s,
         CalculadorTotalOrden $calculador,
         RegistrarAuditoria $a,
+        RegistrarEventoVehiculo $historial,
     ): RedirectResponse {
+        return $this->procesarReversionOrden($r, $uso, $s, $calculador, $a, $historial);
         abort_unless(
             $r->user()->can("inventario.gestionar") ||
                 $r->user()->can("inventario.consumir"),
@@ -616,16 +622,91 @@ class InventarioWebController extends Controller
         );
         return back()->with("success", "Se creó el movimiento compensatorio.");
     }
+    private function procesarUsoOrden(UsarRepuestoOrdenRequest $r, OrdenTrabajoEloquentModel $orden, RegistrarMovimientoInventario $movimientos, ValidarPreparacionTrabajo $preparacion, RegistrarAuditoria $auditoria, RegistrarEventoVehiculo $historial): RedirectResponse
+    {
+        $uso = DB::transaction(function () use ($r, $orden, $movimientos, $preparacion) {
+            $bloqueada = OrdenTrabajoEloquentModel::whereKey($orden->id)->lockForUpdate()->firstOrFail();
+            $this->autorizarOrden($r, $bloqueada);
+            if (! in_array($bloqueada->estado, ['en_diagnostico', 'esperando_repuestos', 'en_reparacion'], true)) throw ValidationException::withMessages(['orden' => 'La orden no permite registrar repuestos utilizados.']);
+            $preparacion->validar($bloqueada->id);
+            $requerimiento = OrdenRepuestoRequeridoEloquentModel::whereKey($r->validated('requerimiento_id'))->where('orden_id', $bloqueada->id)->where('estado', 'aprobado')->lockForUpdate()->first();
+            if (! $requerimiento) throw ValidationException::withMessages(['requerimientoId' => 'Selecciona un requerimiento aprobado de esta orden.']);
+            $usada = BigDecimal::of((string) OrdenRepuestoEloquentModel::where('requerimiento_id', $requerimiento->id)->whereNull('revertido_en')->sum('cantidad'));
+            $restante = BigDecimal::of((string) $requerimiento->cantidad)->minus($usada);
+            $cantidad = BigDecimal::of((string) $r->validated('cantidad'));
+            if ($cantidad->isGreaterThan($restante)) throw ValidationException::withMessages(['cantidad' => "La cantidad supera el saldo aprobado ({$restante})."]);
+
+            $repuesto = null;
+            $movimiento = null;
+            $precio = (string) $requerimiento->precio_unitario_aprobado;
+            $codigo = null;
+            $nombre = $requerimiento->descripcion;
+            $unidad = $requerimiento->unidad_snapshot;
+            $facturable = $requerimiento->fuente_suministro !== 'cliente';
+            if ($requerimiento->fuente_suministro === 'inventario') {
+                $repuestoId = $requerimiento->repuesto_id ?: $r->validated('repuesto_id');
+                if (! $repuestoId) throw ValidationException::withMessages(['repuestoId' => 'Selecciona el repuesto aprobado del inventario.']);
+                $repuesto = RepuestoEloquentModel::whereKey($repuestoId)->where('estado', 'activo')->lockForUpdate()->firstOrFail();
+                if ($requerimiento->repuesto_id && $requerimiento->repuesto_id !== $repuesto->id) throw ValidationException::withMessages(['repuestoId' => 'El repuesto no coincide con el requerimiento aprobado.']);
+                $movimiento = $movimientos->registrar($repuesto->id, (string) $cantidad->negated(), 'salida', 'Uso real en orden '.$bloqueada->numero.($r->validated('observaciones') ? ': '.$r->validated('observaciones') : ''), $r->user()->id, $bloqueada->id, $repuesto->costo_referencia);
+                $precio = (string) $repuesto->precio_venta;
+                $codigo = $repuesto->codigo;
+                $nombre = $repuesto->nombre;
+                $unidad = $repuesto->unidad;
+                if (! $requerimiento->repuesto_id) $requerimiento->update(['repuesto_id' => $repuesto->id, 'unidad_snapshot' => $repuesto->unidad, 'actualizado_por' => $r->user()->id]);
+            } elseif (! $unidad) {
+                throw ValidationException::withMessages(['requerimientoId' => 'El repuesto externo o suministrado por el cliente debe tener unidad registrada.']);
+            }
+            if ($requerimiento->fuente_suministro === 'cliente') $precio = '0.00';
+            $uso = OrdenRepuestoEloquentModel::create(['orden_id' => $bloqueada->id, 'repuesto_id' => $repuesto?->id, 'requerimiento_id' => $requerimiento->id, 'cantidad' => (string) $cantidad, 'precio_unitario' => $precio, 'codigo_snapshot' => $codigo, 'nombre_snapshot' => $nombre, 'unidad_snapshot' => $unidad, 'fuente_suministro' => $requerimiento->fuente_suministro, 'facturable' => $facturable, 'visible_cliente' => true, 'movimiento_salida_id' => $movimiento?->id, 'registrado_por' => $r->user()->id]);
+            if ($cantidad->isEqualTo($restante)) {
+                $requerimiento->update(['estado' => 'utilizado', 'actualizado_por' => $r->user()->id]);
+                DB::table('orden_repuesto_requerido_historial')->insert(['id' => (string) Str::uuid(), 'requerimiento_id' => $requerimiento->id, 'estado_anterior' => 'aprobado', 'estado_nuevo' => 'utilizado', 'cantidad' => $requerimiento->cantidad, 'motivo' => 'Cantidad aprobada utilizada completamente.', 'usuario_id' => $r->user()->id, 'created_at' => now()]);
+            }
+            return $uso;
+        });
+        $auditoria->registrar('orden.repuesto_usado', 'orden_repuesto', $uso->id, ['fuente' => $uso->fuente_suministro], $r);
+        $historial->registrar($orden->vehiculo_id, 'orden.repuesto_usado', "Se registró un repuesto utilizado en {$orden->numero}.", ['orden_id' => $orden->id, 'uso_id' => $uso->id, 'fuente' => $uso->fuente_suministro], $r);
+        return back()->with('success', $uso->fuente_suministro === 'inventario' ? 'Repuesto utilizado y descontado del inventario.' : 'Repuesto utilizado registrado sin afectar inventario interno.');
+    }
+
+    private function procesarReversionOrden(Request $r, OrdenRepuestoEloquentModel $uso, RegistrarMovimientoInventario $movimientos, CalculadorTotalOrden $calculador, RegistrarAuditoria $auditoria, RegistrarEventoVehiculo $historial): RedirectResponse
+    {
+        abort_unless($r->user()->can('repuestos.utilizar'), 403);
+        $datos = $r->validate(['motivo' => ['required', 'string']]);
+        DB::transaction(function () use ($r, $uso, $movimientos, $calculador, $datos) {
+            $orden = OrdenTrabajoEloquentModel::whereKey($uso->orden_id)->lockForUpdate()->firstOrFail();
+            $this->autorizarOrden($r, $orden);
+            if (in_array($orden->estado, ['finalizada', 'lista_entrega', 'entregada', 'cancelada'], true)) throw ValidationException::withMessages(['movimiento' => 'La orden ya no admite devoluciones.']);
+            if (DB::table('facturas_orden')->where('orden_id', $orden->id)->where('estado', 'emitida')->exists()) throw ValidationException::withMessages(['movimiento' => 'No se puede modificar una orden con factura vigente.']);
+            $bloqueado = OrdenRepuestoEloquentModel::whereKey($uso->id)->lockForUpdate()->firstOrFail();
+            if ($bloqueado->revertido_en) throw ValidationException::withMessages(['movimiento' => 'Este uso ya fue revertido.']);
+            $resumen = $calculador->calcular($orden->id);
+            $reduccion = BigDecimal::of((string) $bloqueado->cantidad)->multipliedBy(BigDecimal::of((string) $bloqueado->precio_unitario));
+            if (BigDecimal::of($resumen['total'])->minus($reduccion)->isLessThan(BigDecimal::of($resumen['pagado']))) throw ValidationException::withMessages(['movimiento' => 'Primero anula los pagos que excederían el nuevo total.']);
+            $reversion = null;
+            if ($bloqueado->fuente_suministro === 'inventario') {
+                $origen = MovimientoInventarioEloquentModel::whereKey($bloqueado->movimiento_salida_id)->lockForUpdate()->firstOrFail();
+                $reversion = $movimientos->revertir($origen, $datos['motivo'], $r->user()->id);
+            }
+            $bloqueado->update(['movimiento_reversion_id' => $reversion?->id, 'revertido_en' => now(), 'revertido_por' => $r->user()->id]);
+            $requerimiento = OrdenRepuestoRequeridoEloquentModel::whereKey($bloqueado->requerimiento_id)->lockForUpdate()->first();
+            if ($requerimiento && $requerimiento->estado === 'utilizado') {
+                $requerimiento->update(['estado' => 'aprobado', 'actualizado_por' => $r->user()->id]);
+                DB::table('orden_repuesto_requerido_historial')->insert(['id' => (string) Str::uuid(), 'requerimiento_id' => $requerimiento->id, 'estado_anterior' => 'utilizado', 'estado_nuevo' => 'aprobado', 'cantidad' => $requerimiento->cantidad, 'motivo' => $datos['motivo'], 'usuario_id' => $r->user()->id, 'created_at' => now()]);
+            }
+        });
+        $auditoria->registrar('orden.repuesto_revertido', 'orden_repuesto', $uso->id, ['motivo' => $datos['motivo']], $r);
+        $orden = OrdenTrabajoEloquentModel::findOrFail($uso->orden_id);
+        $historial->registrar($orden->vehiculo_id, 'orden.repuesto_revertido', "Se revirtió un repuesto en {$orden->numero}.", ['orden_id' => $orden->id, 'uso_id' => $uso->id], $r);
+        return back()->with('success', $uso->fuente_suministro === 'inventario' ? 'Se creó el movimiento compensatorio de devolución.' : 'Se revirtió el registro sin afectar inventario interno.');
+    }
+
     private function autorizarOrden(
         Request $r,
         OrdenTrabajoEloquentModel $o,
     ): void {
-        abort_unless(
-            OrdenTrabajoEloquentModel::whereKey($o->id)
-                ->visiblePara($r->user())
-                ->exists(),
-            403,
-        );
+        app(AutorizarMecanicoOrden::class)->autorizar($r->user(), $o);
     }
     private function catalogosDatos(): array
     {

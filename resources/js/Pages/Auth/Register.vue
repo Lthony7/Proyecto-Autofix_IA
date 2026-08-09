@@ -55,56 +55,72 @@ function handleSubmit() {
 
         <form class="grid gap-5 md:grid-cols-2" @submit.prevent="handleSubmit">
           <FormField label="Tipo de documento" name="tipoDocumento" required :error="errors.tipoDocumento">
-            <USelect v-model="state.tipoDocumento" :items="tiposDocumentoColombia" class="w-full" size="xl" />
+            <template #default="{ fieldAttrs }">
+              <USelect v-bind="fieldAttrs" v-model="state.tipoDocumento" :items="tiposDocumentoColombia" class="w-full" size="xl" />
+            </template>
           </FormField>
 
           <FormField label="Número de documento" name="numeroDocumento" required :error="errors.numeroDocumento" :hint="ayudaDocumento(state.tipoDocumento)">
-            <UInput
-              v-model="state.numeroDocumento"
-              :inputmode="documentoNumerico(state.tipoDocumento) ? 'numeric' : 'text'"
-              :maxlength="longitudDocumento(state.tipoDocumento)"
-              autocomplete="off"
-              class="w-full"
-              icon="i-lucide-id-card"
-              size="xl"
-              required
-              @update:model-value="state.numeroDocumento = normalizarDocumento(String($event), state.tipoDocumento)"
-            />
+            <template #default="{ fieldAttrs }">
+              <UInput
+                v-bind="fieldAttrs"
+                v-model="state.numeroDocumento"
+                :inputmode="documentoNumerico(state.tipoDocumento) ? 'numeric' : 'text'"
+                :maxlength="longitudDocumento(state.tipoDocumento)"
+                autocomplete="off"
+                class="w-full"
+                icon="i-lucide-id-card"
+                size="xl"
+                @update:model-value="state.numeroDocumento = normalizarDocumento(String($event), state.tipoDocumento)"
+              />
+            </template>
           </FormField>
 
           <FormField class="md:col-span-2" label="Nombre completo o razón social" name="razonSocial" required :error="errors.razonSocial">
-            <UInput v-model="state.razonSocial" autocomplete="name" class="w-full" icon="i-lucide-user" size="xl" required />
+            <template #default="{ fieldAttrs }">
+              <UInput v-bind="fieldAttrs" v-model="state.razonSocial" autocomplete="name" class="w-full" icon="i-lucide-user" size="xl" />
+            </template>
           </FormField>
 
           <FormField label="Teléfono" name="telefono" required :error="errors.telefono" hint="Número colombiano de 10 dígitos o con prefijo +57.">
-            <UInput
-              v-model="state.telefono"
-              type="tel"
-              inputmode="tel"
-              autocomplete="tel"
-              maxlength="13"
-              class="w-full"
-              icon="i-lucide-phone"
-              size="xl"
-              required
-              @update:model-value="state.telefono = normalizarTelefono(String($event))"
-            />
+            <template #default="{ fieldAttrs }">
+              <UInput
+                v-bind="fieldAttrs"
+                v-model="state.telefono"
+                type="tel"
+                inputmode="tel"
+                autocomplete="tel"
+                maxlength="13"
+                class="w-full"
+                icon="i-lucide-phone"
+                size="xl"
+                @update:model-value="state.telefono = normalizarTelefono(String($event))"
+              />
+            </template>
           </FormField>
 
           <FormField label="Dirección" name="direccion" required :error="errors.direccion">
-            <UInput v-model="state.direccion" autocomplete="street-address" class="w-full" icon="i-lucide-map-pin" size="xl" required />
+            <template #default="{ fieldAttrs }">
+              <UInput v-bind="fieldAttrs" v-model="state.direccion" autocomplete="street-address" class="w-full" icon="i-lucide-map-pin" size="xl" />
+            </template>
           </FormField>
 
           <FormField class="md:col-span-2" label="Correo electrónico" name="email" required :error="errors.email">
-            <UInput v-model="state.email" type="email" autocomplete="email" maxlength="254" class="w-full" icon="i-lucide-mail" size="xl" required />
+            <template #default="{ fieldAttrs }">
+              <UInput v-bind="fieldAttrs" v-model="state.email" type="email" autocomplete="email" maxlength="254" class="w-full" icon="i-lucide-mail" size="xl" />
+            </template>
           </FormField>
 
           <FormField label="Contraseña" name="password" required :error="errors.password" hint="Mínimo 8 caracteres, con mayúsculas, minúsculas y números.">
-            <UInput v-model="state.password" type="password" autocomplete="new-password" class="w-full" icon="i-lucide-lock" size="xl" required />
+            <template #default="{ fieldAttrs }">
+              <UInput v-bind="fieldAttrs" v-model="state.password" type="password" autocomplete="new-password" class="w-full" icon="i-lucide-lock" size="xl" />
+            </template>
           </FormField>
 
           <FormField label="Confirmar contraseña" name="password_confirmation" required :error="errors.passwordConfirmation">
-            <UInput v-model="state.password_confirmation" type="password" autocomplete="new-password" class="w-full" icon="i-lucide-lock-keyhole" size="xl" required />
+            <template #default="{ fieldAttrs }">
+              <UInput v-bind="fieldAttrs" v-model="state.password_confirmation" type="password" autocomplete="new-password" class="w-full" icon="i-lucide-lock-keyhole" size="xl" />
+            </template>
           </FormField>
 
           <div class="md:col-span-2">

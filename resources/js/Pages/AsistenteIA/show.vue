@@ -1,59 +1,1002 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
-import { Head, Link, router, usePage } from '@inertiajs/vue3'
-import { route } from 'ziggy-js'
-import { usePermissions } from '../../composables/usePermissions'
+import { computed, reactive, ref } from "vue";
+import { Head, Link, router, usePage } from "@inertiajs/vue3";
+import { route } from "ziggy-js";
+import { usePermissions } from "../../composables/usePermissions";
 
-interface Causa { nombre?:string;causa?:string;explicacion?:string;probabilidad_o_nivel?:string;confianza?:string;evidencias_a_favor?:string[];evidencias_en_contra?:string[];prueba_confirmacion?:string }
-interface Repuesto { nombre:string;cantidad:number;motivo:string;probabilidad_o_nivel:string }
-interface Respuesta { resumen_cliente?:string;resumen?:string;diagnostico_tecnico?:string;posibles_causas:Causa[];acciones_recomendadas?:string[];pruebas_sugeridas?:string[];nivel_confianza?:string;nivel_riesgo?:string;nivel_urgencia?:string;puede_circular?:string;precauciones?:string[];riesgos?:string[];especialidad_requerida?:string;especialidad_recomendada?:string;herramientas_sugeridas?:string[];tiempo_estimado_diagnostico?:string;tiempo_estimado_reparacion?:string;complejidad?:string;servicios_sugeridos:string[];repuestos_posibles?:Repuesto[];observaciones_mecanico:string;datos_faltantes?:string[];preguntas_adicionales?:string[];advertencia:string;recomendacion_inmediata?:string }
-interface Mecanico { id:string;nombre:string;especialidades:string[];ordenesActivas?:number;citasFuturas?:number;tieneHorario?:boolean;preferente:boolean }
-interface Consulta {id:string;version:number;cliente:string;vehiculo:string;vehiculoDetalle:{placa:string;marca:string;modelo:string;anio:number;kilometraje:number};entrada:Record<string,any>;respuesta:Respuesta;respuestaVigente:Respuesta;estado:string;prioridad:string;riesgo?:string;urgencia?:string;simulada:boolean;especialidad?:string;mecanicoSugeridoId?:string;citaId?:string;ordenId?:string;ordenNumero?:string;revisiones:any[];promptVersion:string;esquemaVersion:string}
-const props=defineProps<{consulta:Consulta;mecanicos:Mecanico[];puedeRevisar:boolean}>()
-const { can }=usePermissions()
-const errors=computed<Record<string,string>>(()=>usePage().props.errors as Record<string,string>)
-const enviando=ref(false)
-const respuesta=computed(()=>props.consulta.respuestaVigente||props.consulta.respuesta)
-const causas=computed(()=>(respuesta.value.posibles_causas??[]).map(c=>({nombre:c.nombre||c.causa||'Causa por revisar',explicacion:c.explicacion||'Requiere comprobación física.',nivel:c.probabilidad_o_nivel||c.confianza||'media',favor:c.evidencias_a_favor??[],contra:c.evidencias_en_contra??[],prueba:c.prueba_confirmacion||'Inspección y prueba funcional.'})))
-const revision=reactive({estado:'confirmada',coincideIa:true,observacionesCliente:'',notasInternas:'',motivoDiferencia:'',diagnosticoCorregido:respuesta.value.diagnostico_tecnico??respuesta.value.resumen??'',servicioCorregido:respuesta.value.servicios_sugeridos?.[0]??'',prioridadCorregida:props.consulta.prioridad,pruebasRealizadas:'',resumenAjustado:respuesta.value.resumen_cliente??respuesta.value.resumen??'',observaciones:''})
-function seleccionarCoincidencia(coincide:boolean){revision.coincideIa=coincide;revision.estado=coincide?'confirmada':'modificada'}
-function revisar(estado?:string){if(estado==='descartada'&&revision.estado!=='descartada'){revision.coincideIa=false;revision.estado='descartada';return}if(estado)revision.estado=estado;enviando.value=true;router.post(route('ia.revisar',props.consulta.id),revision,{preserveScroll:true,onFinish:()=>enviando.value=false})}
-function colorNivel(valor?:string):'error'|'warning'|'success'|'primary'|'neutral'{if(['critica','critico','muy_urgente','alta','alto','no'].includes(valor??''))return'error';if(['media','medio','urgente','con_precaucion'].includes(valor??''))return'warning';if(['baja','bajo','si'].includes(valor??''))return'success';return'neutral'}
+interface Causa {
+    nombre?: string;
+    causa?: string;
+    explicacion?: string;
+    probabilidad_o_nivel?: string;
+    confianza?: string;
+    evidencias_a_favor?: string[];
+    evidencias_en_contra?: string[];
+    prueba_confirmacion?: string;
+}
+interface Repuesto {
+    nombre: string;
+    cantidad: number;
+    motivo: string;
+    probabilidad_o_nivel: string;
+}
+interface Respuesta {
+    resumen_cliente?: string;
+    resumen?: string;
+    diagnostico_tecnico?: string;
+    posibles_causas: Causa[];
+    acciones_recomendadas?: string[];
+    pruebas_sugeridas?: string[];
+    nivel_confianza?: string;
+    nivel_riesgo?: string;
+    nivel_urgencia?: string;
+    puede_circular?: string;
+    precauciones?: string[];
+    riesgos?: string[];
+    especialidad_requerida?: string;
+    especialidad_recomendada?: string;
+    herramientas_sugeridas?: string[];
+    tiempo_estimado_diagnostico?: string;
+    tiempo_estimado_reparacion?: string;
+    complejidad?: string;
+    servicios_sugeridos: string[];
+    repuestos_posibles?: Repuesto[];
+    observaciones_mecanico: string;
+    datos_faltantes?: string[];
+    preguntas_adicionales?: string[];
+    advertencia: string;
+    recomendacion_inmediata?: string;
+}
+interface Mecanico {
+    id: string;
+    nombre: string;
+    especialidades: string[];
+    ordenesActivas?: number;
+    citasFuturas?: number;
+    tieneHorario?: boolean;
+    preferente: boolean;
+}
+interface Consulta {
+    id: string;
+    version: number;
+    cliente: string;
+    vehiculo: string;
+    vehiculoDetalle: {
+        placa: string;
+        marca: string;
+        modelo: string;
+        anio: number;
+        kilometraje: number;
+    };
+    entrada: Record<string, any>;
+    respuesta: Respuesta;
+    respuestaVigente: Respuesta;
+    estado: string;
+    prioridad: string;
+    riesgo?: string;
+    urgencia?: string;
+    simulada: boolean;
+    especialidad?: string;
+    mecanicoSugeridoId?: string;
+    citaId?: string;
+    ordenId?: string;
+    ordenNumero?: string;
+    revisiones: any[];
+    promptVersion: string;
+    esquemaVersion: string;
+}
+const props = defineProps<{
+    consulta: Consulta;
+    mecanicos: Mecanico[];
+    puedeRevisar: boolean;
+}>();
+const { can } = usePermissions();
+const errors = computed<Record<string, string>>(
+    () => usePage().props.errors as Record<string, string>,
+);
+const enviando = ref(false);
+const respuesta = computed(
+    () => props.consulta.respuestaVigente || props.consulta.respuesta,
+);
+const causas = computed(() =>
+    (respuesta.value.posibles_causas ?? []).map((c) => ({
+        nombre: c.nombre || c.causa || "Causa por revisar",
+        explicacion: c.explicacion || "Requiere comprobación física.",
+        nivel: c.probabilidad_o_nivel || c.confianza || "media",
+        favor: c.evidencias_a_favor ?? [],
+        contra: c.evidencias_en_contra ?? [],
+        prueba: c.prueba_confirmacion || "Inspección y prueba funcional.",
+    })),
+);
+const revision = reactive({
+    estado: "confirmada",
+    coincideIa: true,
+    observacionesCliente: "",
+    notasInternas: "",
+    motivoDiferencia: "",
+    diagnosticoCorregido:
+        respuesta.value.diagnostico_tecnico ?? respuesta.value.resumen ?? "",
+    servicioCorregido: respuesta.value.servicios_sugeridos?.[0] ?? "",
+    prioridadCorregida: props.consulta.prioridad,
+    pruebasRealizadas: "",
+    resumenAjustado:
+        respuesta.value.resumen_cliente ?? respuesta.value.resumen ?? "",
+    observaciones: "",
+});
+function seleccionarCoincidencia(coincide: boolean) {
+    revision.coincideIa = coincide;
+    revision.estado = coincide ? "confirmada" : "modificada";
+}
+function revisar(estado?: string) {
+    if (estado === "descartada" && revision.estado !== "descartada") {
+        revision.coincideIa = false;
+        revision.estado = "descartada";
+        return;
+    }
+    if (estado) revision.estado = estado;
+    enviando.value = true;
+    router.post(route("ia.revisar", props.consulta.id), revision, {
+        preserveScroll: true,
+        onFinish: () => (enviando.value = false),
+    });
+}
+function colorNivel(
+    valor?: string,
+): "error" | "warning" | "success" | "primary" | "neutral" {
+    if (
+        ["critica", "critico", "muy_urgente", "alta", "alto", "no"].includes(
+            valor ?? "",
+        )
+    )
+        return "error";
+    if (["media", "medio", "urgente", "con_precaucion"].includes(valor ?? ""))
+        return "warning";
+    if (["baja", "bajo", "si"].includes(valor ?? "")) return "success";
+    return "neutral";
+}
 </script>
 
 <template>
-  <Head :title="`Diagnóstico IA${consulta.ordenNumero?' - '+consulta.ordenNumero:''}`"/>
-  <UDashboardPanel>
-    <template #header><UDashboardNavbar :title="`Diagnóstico IA${consulta.ordenNumero?' - '+consulta.ordenNumero:''}`"><template #right><Link v-if="consulta.ordenId&&can('ordenes.ver')" :href="route('ordenes.show',consulta.ordenId)"><UButton label="Ver orden" icon="i-lucide-clipboard-list" color="neutral" variant="outline"/></Link><Link v-if="can('citas.ver')" :href="route('citas.calendario')"><UButton label="Calendario" icon="i-lucide-calendar-days" color="neutral" variant="outline"/></Link><UButton v-if="puedeRevisar&&!['confirmada','modificada','descartada','cerrada'].includes(consulta.estado)" label="Revisar / confirmar" icon="i-lucide-clipboard-check" @click="document.getElementById('revision-ia')?.scrollIntoView({behavior:'smooth'})"/></template></UDashboardNavbar></template>
-    <template #body><div class="space-y-5">
-      <UAlert :color="puedeRevisar?'success':'warning'" :icon="puedeRevisar?'i-lucide-wrench':'i-lucide-triangle-alert'" :title="puedeRevisar?'Vista del mecánico':'Diagnóstico preliminar'" :description="puedeRevisar?'Contrasta cada hipótesis con pruebas, registra tu conclusión y conserva separadas las notas internas.':consulta.respuesta.advertencia"/>
-      <div class="flex flex-wrap gap-2"><UBadge :color="colorNivel(consulta.estado)" variant="subtle">{{consulta.estado.replaceAll('_',' ')}}</UBadge><UBadge v-if="consulta.simulada" color="neutral" variant="subtle">Simulado</UBadge><UBadge color="neutral" variant="outline">Versión {{consulta.version}}</UBadge><UBadge :color="colorNivel(consulta.prioridad)" variant="subtle">Prioridad {{consulta.prioridad}}</UBadge><UBadge :color="colorNivel(respuesta.nivel_riesgo||consulta.riesgo)" variant="subtle">Riesgo {{respuesta.nivel_riesgo||consulta.riesgo||'por confirmar'}}</UBadge><UBadge color="primary" variant="subtle">{{consulta.especialidad||respuesta.especialidad_requerida||respuesta.especialidad_recomendada}}</UBadge></div>
+    <Head
+        :title="`Diagnóstico IA${consulta.ordenNumero ? ' - ' + consulta.ordenNumero : ''}`"
+    />
+    <UDashboardPanel>
+        <template #header
+            ><UDashboardNavbar
+                :title="`Diagnóstico IA${consulta.ordenNumero ? ' - ' + consulta.ordenNumero : ''}`"
+                ><template #right
+                    ><Link
+                        v-if="consulta.ordenId && can('ordenes.ver')"
+                        :href="route('ordenes.show', consulta.ordenId)"
+                        ><UButton
+                            label="Ver orden"
+                            icon="i-lucide-clipboard-list"
+                            color="neutral"
+                            variant="outline" /></Link
+                    ><Link
+                        v-if="can('citas.ver')"
+                        :href="route('citas.calendario')"
+                        ><UButton
+                            label="Calendario"
+                            icon="i-lucide-calendar-days"
+                            color="neutral"
+                            variant="outline" /></Link
+                    ><UButton
+                        v-if="
+                            puedeRevisar &&
+                            ![
+                                'confirmada',
+                                'modificada',
+                                'descartada',
+                                'cerrada',
+                            ].includes(consulta.estado)
+                        "
+                        label="Revisar / confirmar"
+                        icon="i-lucide-clipboard-check"
+                        @click="
+                            document
+                                .getElementById('revision-ia')
+                                ?.scrollIntoView({ behavior: 'smooth' })
+                        " /></template></UDashboardNavbar
+        ></template>
+        <template #body
+            ><div class="space-y-5">
+                <UAlert
+                    color="warning"
+                    icon="i-lucide-triangle-alert"
+                    title="Diagnóstico preliminar"
+                    :description="consulta.respuesta.advertencia"
+                />
+                <UAlert
+                    v-if="puedeRevisar"
+                    color="success"
+                    icon="i-lucide-wrench"
+                    title="Vista del mecánico"
+                    description="Contrasta cada hipótesis con pruebas, registra tu conclusión y conserva separadas las notas internas."
+                />
+                <div class="flex flex-wrap gap-2">
+                    <UBadge
+                        :color="colorNivel(consulta.estado)"
+                        variant="subtle"
+                        >{{ consulta.estado.replaceAll("_", " ") }}</UBadge
+                    ><UBadge
+                        v-if="consulta.simulada"
+                        color="neutral"
+                        variant="subtle"
+                        >Simulado</UBadge
+                    ><UBadge color="neutral" variant="outline"
+                        >Versión {{ consulta.version }}</UBadge
+                    ><UBadge
+                        :color="colorNivel(consulta.prioridad)"
+                        variant="subtle"
+                        >Prioridad {{ consulta.prioridad }}</UBadge
+                    ><UBadge
+                        :color="
+                            colorNivel(
+                                respuesta.nivel_riesgo || consulta.riesgo,
+                            )
+                        "
+                        variant="subtle"
+                        >Riesgo
+                        {{
+                            respuesta.nivel_riesgo ||
+                            consulta.riesgo ||
+                            "por confirmar"
+                        }}</UBadge
+                    ><UBadge color="primary" variant="subtle">{{
+                        consulta.especialidad ||
+                        respuesta.especialidad_requerida ||
+                        respuesta.especialidad_recomendada
+                    }}</UBadge>
+                </div>
 
-      <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><UCard><p class="text-xs uppercase text-muted">Orden</p><p class="mt-1 font-mono font-bold">{{consulta.ordenNumero||'Pendiente de vincular'}}</p></UCard><UCard><p class="text-xs uppercase text-muted">Cliente</p><p class="mt-1 font-bold">{{consulta.cliente}}</p></UCard><UCard><p class="text-xs uppercase text-muted">Vehículo</p><p class="mt-1 font-bold">{{consulta.vehiculoDetalle.placa}}</p><p class="text-xs text-muted">{{consulta.vehiculoDetalle.marca}} {{consulta.vehiculoDetalle.modelo}} ({{consulta.vehiculoDetalle.anio}})</p></UCard><UCard><p class="text-xs uppercase text-muted">Kilometraje ingreso</p><p class="mt-1 font-mono text-xl font-bold">{{Number(consulta.vehiculoDetalle.kilometraje).toLocaleString('es-CO')}} km</p></UCard></section>
+                <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <UCard
+                        ><p class="text-xs uppercase text-muted">Orden</p>
+                        <p class="mt-1 font-mono font-bold">
+                            {{
+                                consulta.ordenNumero || "Pendiente de vincular"
+                            }}
+                        </p></UCard
+                    ><UCard
+                        ><p class="text-xs uppercase text-muted">Cliente</p>
+                        <p class="mt-1 font-bold">
+                            {{ consulta.cliente }}
+                        </p></UCard
+                    ><UCard
+                        ><p class="text-xs uppercase text-muted">Vehículo</p>
+                        <p class="mt-1 font-bold">
+                            {{ consulta.vehiculoDetalle.placa }}
+                        </p>
+                        <p class="text-xs text-muted">
+                            {{ consulta.vehiculoDetalle.marca }}
+                            {{ consulta.vehiculoDetalle.modelo }} ({{
+                                consulta.vehiculoDetalle.anio
+                            }})
+                        </p></UCard
+                    ><UCard
+                        ><p class="text-xs uppercase text-muted">
+                            Kilometraje ingreso
+                        </p>
+                        <p class="mt-1 font-mono text-xl font-bold">
+                            {{
+                                Number(
+                                    consulta.vehiculoDetalle.kilometraje,
+                                ).toLocaleString("es-CO")
+                            }}
+                            km
+                        </p></UCard
+                    >
+                </section>
 
-      <UCard><template #header><div class="flex items-center gap-2"><UIcon name="i-lucide-file-text" class="size-5 text-primary"/><h2 class="font-bold">Reporte ingresado</h2></div></template><p class="font-medium">{{consulta.entrada.sintoma_principal}}</p><dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4"><div v-if="consulta.entrada.categoria_falla"><dt class="text-muted">Sistema reportado</dt><dd>{{consulta.entrada.categoria_falla}}</dd></div><div v-if="consulta.entrada.frecuencia"><dt class="text-muted">Frecuencia</dt><dd>{{consulta.entrada.frecuencia.replaceAll('_',' ')}}</dd></div><div v-if="consulta.entrada.intensidad"><dt class="text-muted">Intensidad</dt><dd>{{consulta.entrada.intensidad}}</dd></div><div v-if="consulta.entrada.momento_ocurre"><dt class="text-muted">Momento</dt><dd>{{consulta.entrada.momento_ocurre}}</dd></div><div v-if="consulta.entrada.condiciones?.length" class="sm:col-span-2"><dt class="text-muted">Condiciones</dt><dd>{{consulta.entrada.condiciones.join(', ')}}</dd></div><div v-if="consulta.entrada.codigos_obd"><dt class="text-muted">Códigos OBD</dt><dd class="font-mono">{{consulta.entrada.codigos_obd}}</dd></div><div v-if="consulta.entrada.senales"><dt class="text-muted">Señales adicionales</dt><dd>{{consulta.entrada.senales}}</dd></div></dl></UCard>
+                <UCard
+                    ><template #header
+                        ><div class="flex items-center gap-2">
+                            <UIcon
+                                name="i-lucide-file-text"
+                                class="size-5 text-primary"
+                            />
+                            <h2 class="font-bold">Reporte ingresado</h2>
+                        </div></template
+                    >
+                    <p class="font-medium">
+                        {{ consulta.entrada.sintoma_principal }}
+                    </p>
+                    <dl
+                        class="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4"
+                    >
+                        <div v-if="consulta.entrada.categoria_falla">
+                            <dt class="text-muted">Sistema reportado</dt>
+                            <dd>{{ consulta.entrada.categoria_falla }}</dd>
+                        </div>
+                        <div v-if="consulta.entrada.frecuencia">
+                            <dt class="text-muted">Frecuencia</dt>
+                            <dd>
+                                {{
+                                    consulta.entrada.frecuencia.replaceAll(
+                                        "_",
+                                        " ",
+                                    )
+                                }}
+                            </dd>
+                        </div>
+                        <div v-if="consulta.entrada.intensidad">
+                            <dt class="text-muted">Intensidad</dt>
+                            <dd>{{ consulta.entrada.intensidad }}</dd>
+                        </div>
+                        <div v-if="consulta.entrada.momento_ocurre">
+                            <dt class="text-muted">Momento</dt>
+                            <dd>{{ consulta.entrada.momento_ocurre }}</dd>
+                        </div>
+                        <div
+                            v-if="consulta.entrada.condiciones?.length"
+                            class="sm:col-span-2"
+                        >
+                            <dt class="text-muted">Condiciones</dt>
+                            <dd>
+                                {{ consulta.entrada.condiciones.join(", ") }}
+                            </dd>
+                        </div>
+                        <div v-if="consulta.entrada.codigos_obd">
+                            <dt class="text-muted">Códigos OBD</dt>
+                            <dd class="font-mono">
+                                {{ consulta.entrada.codigos_obd }}
+                            </dd>
+                        </div>
+                        <div v-if="consulta.entrada.senales">
+                            <dt class="text-muted">Señales adicionales</dt>
+                            <dd>{{ consulta.entrada.senales }}</dd>
+                        </div>
+                    </dl></UCard
+                >
 
-      <section class="grid gap-5 xl:grid-cols-[1.35fr_1fr]"><div class="space-y-5"><UCard><template #header><div><p class="font-mono text-xs uppercase tracking-wider text-primary">Para el cliente</p><h2 class="mt-1 font-bold">Resumen preliminar</h2></div></template><p class="leading-7">{{respuesta.resumen_cliente||respuesta.resumen}}</p></UCard><UCard><template #header><div><p class="font-mono text-xs uppercase tracking-wider text-primary">Para revisión técnica</p><h2 class="mt-1 font-bold">Diagnóstico detallado IA</h2></div></template><p class="leading-7">{{respuesta.diagnostico_tecnico||respuesta.resumen}}</p><div class="mt-4 rounded-lg border border-primary/15 bg-primary/5 p-4"><p class="text-sm font-semibold">Observaciones para el mecánico</p><p class="mt-1 text-sm leading-6">{{respuesta.observaciones_mecanico}}</p></div></UCard></div><UCard><template #header><h2 class="font-bold">Evaluación preliminar</h2></template><dl class="grid gap-3 sm:grid-cols-2 xl:grid-cols-1"><div class="rounded-lg bg-elevated p-3"><dt class="text-xs text-muted">Confianza</dt><dd class="mt-1 font-bold">{{respuesta.nivel_confianza||'Por confirmar'}}</dd></div><div class="rounded-lg bg-elevated p-3"><dt class="text-xs text-muted">Circulación</dt><dd class="mt-1"><UBadge :color="colorNivel(respuesta.puede_circular)" variant="subtle">{{respuesta.puede_circular||'Por confirmar'}}</UBadge></dd></div><div class="rounded-lg bg-elevated p-3"><dt class="text-xs text-muted">Diagnóstico estimado</dt><dd class="mt-1 font-medium">{{respuesta.tiempo_estimado_diagnostico||'No estimado'}}</dd></div><div class="rounded-lg bg-elevated p-3"><dt class="text-xs text-muted">Reparación estimada</dt><dd class="mt-1 font-medium">{{respuesta.tiempo_estimado_reparacion||'Por determinar'}}</dd></div><div class="rounded-lg bg-elevated p-3"><dt class="text-xs text-muted">Complejidad</dt><dd class="mt-1 font-bold">{{respuesta.complejidad||'Por confirmar'}}</dd></div></dl></UCard></section>
+                <section class="grid gap-5 xl:grid-cols-[1.35fr_1fr]">
+                    <div class="space-y-5">
+                        <UCard
+                            ><template #header
+                                ><div>
+                                    <p
+                                        class="font-mono text-xs uppercase tracking-wider text-primary"
+                                    >
+                                        Para el cliente
+                                    </p>
+                                    <h2 class="mt-1 font-bold">
+                                        Resumen preliminar
+                                    </h2>
+                                </div></template
+                            >
+                            <p class="leading-7">
+                                {{
+                                    respuesta.resumen_cliente ||
+                                    respuesta.resumen
+                                }}
+                            </p></UCard
+                        ><UCard
+                            ><template #header
+                                ><div>
+                                    <p
+                                        class="font-mono text-xs uppercase tracking-wider text-primary"
+                                    >
+                                        Para revisión técnica
+                                    </p>
+                                    <h2 class="mt-1 font-bold">
+                                        Diagnóstico detallado IA
+                                    </h2>
+                                </div></template
+                            >
+                            <p class="leading-7">
+                                {{
+                                    respuesta.diagnostico_tecnico ||
+                                    respuesta.resumen
+                                }}
+                            </p>
+                            <div
+                                class="mt-4 rounded-lg border border-primary/15 bg-primary/5 p-4"
+                            >
+                                <p class="text-sm font-semibold">
+                                    Observaciones para el mecánico
+                                </p>
+                                <p class="mt-1 text-sm leading-6">
+                                    {{ respuesta.observaciones_mecanico }}
+                                </p>
+                            </div></UCard
+                        >
+                    </div>
+                    <UCard
+                        ><template #header
+                            ><h2 class="font-bold">
+                                Evaluación preliminar
+                            </h2></template
+                        >
+                        <dl class="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                            <div class="rounded-lg bg-elevated p-3">
+                                <dt class="text-xs text-muted">Confianza</dt>
+                                <dd class="mt-1 font-bold">
+                                    {{
+                                        respuesta.nivel_confianza ||
+                                        "Por confirmar"
+                                    }}
+                                </dd>
+                            </div>
+                            <div class="rounded-lg bg-elevated p-3">
+                                <dt class="text-xs text-muted">Circulación</dt>
+                                <dd class="mt-1">
+                                    <UBadge
+                                        :color="
+                                            colorNivel(respuesta.puede_circular)
+                                        "
+                                        variant="subtle"
+                                        >{{
+                                            respuesta.puede_circular ||
+                                            "Por confirmar"
+                                        }}</UBadge
+                                    >
+                                </dd>
+                            </div>
+                            <div class="rounded-lg bg-elevated p-3">
+                                <dt class="text-xs text-muted">
+                                    Diagnóstico estimado
+                                </dt>
+                                <dd class="mt-1 font-medium">
+                                    {{
+                                        respuesta.tiempo_estimado_diagnostico ||
+                                        "No estimado"
+                                    }}
+                                </dd>
+                            </div>
+                            <div class="rounded-lg bg-elevated p-3">
+                                <dt class="text-xs text-muted">
+                                    Reparación estimada
+                                </dt>
+                                <dd class="mt-1 font-medium">
+                                    {{
+                                        respuesta.tiempo_estimado_reparacion ||
+                                        "Por determinar"
+                                    }}
+                                </dd>
+                            </div>
+                            <div class="rounded-lg bg-elevated p-3">
+                                <dt class="text-xs text-muted">Complejidad</dt>
+                                <dd class="mt-1 font-bold">
+                                    {{
+                                        respuesta.complejidad || "Por confirmar"
+                                    }}
+                                </dd>
+                            </div>
+                        </dl></UCard
+                    >
+                </section>
 
-      <UCard><template #header><div><p class="font-mono text-xs uppercase tracking-wider text-primary">Hipótesis ordenadas</p><h2 class="mt-1 font-bold">Posibles causas y pruebas de confirmación</h2></div></template><div class="grid gap-3 lg:grid-cols-2"><article v-for="(causa,index) in causas" :key="causa.nombre" class="rounded-xl border border-default bg-elevated/45 p-4"><div class="flex items-start justify-between gap-3"><div class="flex items-center gap-2"><span class="grid size-7 place-items-center rounded-full bg-primary/10 font-mono text-xs font-bold text-primary">{{index+1}}</span><h3 class="font-semibold">{{causa.nombre}}</h3></div><UBadge :color="colorNivel(causa.nivel)" variant="subtle">{{causa.nivel}}</UBadge></div><p class="mt-3 text-sm leading-6 text-muted">{{causa.explicacion}}</p><div v-if="causa.favor.length||causa.contra.length" class="mt-3 grid gap-2 sm:grid-cols-2"><div v-if="causa.favor.length" class="rounded-lg bg-success/5 p-2"><p class="text-[10px] font-bold uppercase text-success">A favor</p><p class="mt-1 text-xs">{{causa.favor.join(' · ')}}</p></div><div v-if="causa.contra.length" class="rounded-lg bg-warning/5 p-2"><p class="text-[10px] font-bold uppercase text-warning">Por comprobar</p><p class="mt-1 text-xs">{{causa.contra.join(' · ')}}</p></div></div><div class="mt-3 border-t border-default pt-3"><p class="text-xs text-muted">Prueba de confirmación</p><p class="mt-1 text-sm font-medium">{{causa.prueba}}</p></div></article></div></UCard>
+                <UCard
+                    ><template #header
+                        ><div>
+                            <p
+                                class="font-mono text-xs uppercase tracking-wider text-primary"
+                            >
+                                Hipótesis ordenadas
+                            </p>
+                            <h2 class="mt-1 font-bold">
+                                Posibles causas y pruebas de confirmación
+                            </h2>
+                        </div></template
+                    >
+                    <div class="grid gap-3 lg:grid-cols-2">
+                        <article
+                            v-for="(causa, index) in causas"
+                            :key="causa.nombre"
+                            class="rounded-xl border border-default bg-elevated/45 p-4"
+                        >
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="grid size-7 place-items-center rounded-full bg-primary/10 font-mono text-xs font-bold text-primary"
+                                        >{{ index + 1 }}</span
+                                    >
+                                    <h3 class="font-semibold">
+                                        {{ causa.nombre }}
+                                    </h3>
+                                </div>
+                                <UBadge
+                                    :color="colorNivel(causa.nivel)"
+                                    variant="subtle"
+                                    >{{ causa.nivel }}</UBadge
+                                >
+                            </div>
+                            <p class="mt-3 text-sm leading-6 text-muted">
+                                {{ causa.explicacion }}
+                            </p>
+                            <div
+                                v-if="causa.favor.length || causa.contra.length"
+                                class="mt-3 grid gap-2 sm:grid-cols-2"
+                            >
+                                <div
+                                    v-if="causa.favor.length"
+                                    class="rounded-lg bg-success/5 p-2"
+                                >
+                                    <p
+                                        class="text-[10px] font-bold uppercase text-success"
+                                    >
+                                        A favor
+                                    </p>
+                                    <p class="mt-1 text-xs">
+                                        {{ causa.favor.join(" · ") }}
+                                    </p>
+                                </div>
+                                <div
+                                    v-if="causa.contra.length"
+                                    class="rounded-lg bg-warning/5 p-2"
+                                >
+                                    <p
+                                        class="text-[10px] font-bold uppercase text-warning"
+                                    >
+                                        Por comprobar
+                                    </p>
+                                    <p class="mt-1 text-xs">
+                                        {{ causa.contra.join(" · ") }}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="mt-3 border-t border-default pt-3">
+                                <p class="text-xs text-muted">
+                                    Prueba de confirmación
+                                </p>
+                                <p class="mt-1 text-sm font-medium">
+                                    {{ causa.prueba }}
+                                </p>
+                            </div>
+                        </article>
+                    </div></UCard
+                >
 
-      <section class="grid gap-5 lg:grid-cols-2"><UCard><template #header><div class="flex items-center gap-2"><UIcon name="i-lucide-list-checks" class="text-primary"/><h2 class="font-bold">Acciones recomendadas</h2></div></template><ol class="list-decimal space-y-2 pl-5 text-sm"><li v-for="accion in respuesta.acciones_recomendadas??[respuesta.recomendacion_inmediata]" :key="accion">{{accion}}</li></ol><p v-if="respuesta.herramientas_sugeridas?.length" class="mt-4 text-xs text-muted"><strong>Herramientas:</strong> {{respuesta.herramientas_sugeridas.join(', ')}}</p></UCard><UCard><template #header><div class="flex items-center gap-2"><UIcon name="i-lucide-flask-conical" class="text-primary"/><h2 class="font-bold">Pruebas sugeridas</h2></div></template><ul class="list-disc space-y-2 pl-5 text-sm"><li v-for="prueba in respuesta.pruebas_sugeridas??[]" :key="prueba">{{prueba}}</li></ul><div v-if="(respuesta.datos_faltantes??respuesta.preguntas_adicionales)?.length" class="mt-4 rounded-lg bg-elevated p-3"><p class="text-xs font-bold uppercase text-muted">Datos que mejorarían la certeza</p><p class="mt-1 text-sm">{{(respuesta.datos_faltantes??respuesta.preguntas_adicionales)?.join(' · ')}}</p></div></UCard></section>
+                <section class="grid gap-5 lg:grid-cols-2">
+                    <UCard
+                        ><template #header
+                            ><div class="flex items-center gap-2">
+                                <UIcon
+                                    name="i-lucide-list-checks"
+                                    class="text-primary"
+                                />
+                                <h2 class="font-bold">Acciones recomendadas</h2>
+                            </div></template
+                        >
+                        <ol class="list-decimal space-y-2 pl-5 text-sm">
+                            <li
+                                v-for="accion in respuesta.acciones_recomendadas ?? [
+                                    respuesta.recomendacion_inmediata,
+                                ]"
+                                :key="accion"
+                            >
+                                {{ accion }}
+                            </li>
+                        </ol>
+                        <p
+                            v-if="respuesta.herramientas_sugeridas?.length"
+                            class="mt-4 text-xs text-muted"
+                        >
+                            <strong>Herramientas:</strong>
+                            {{ respuesta.herramientas_sugeridas.join(", ") }}
+                        </p></UCard
+                    ><UCard
+                        ><template #header
+                            ><div class="flex items-center gap-2">
+                                <UIcon
+                                    name="i-lucide-flask-conical"
+                                    class="text-primary"
+                                />
+                                <h2 class="font-bold">Pruebas sugeridas</h2>
+                            </div></template
+                        >
+                        <ul class="list-disc space-y-2 pl-5 text-sm">
+                            <li
+                                v-for="prueba in respuesta.pruebas_sugeridas ??
+                                []"
+                                :key="prueba"
+                            >
+                                {{ prueba }}
+                            </li>
+                        </ul>
+                        <div
+                            v-if="
+                                (
+                                    respuesta.datos_faltantes ??
+                                    respuesta.preguntas_adicionales
+                                )?.length
+                            "
+                            class="mt-4 rounded-lg bg-elevated p-3"
+                        >
+                            <p class="text-xs font-bold uppercase text-muted">
+                                Datos que mejorarían la certeza
+                            </p>
+                            <p class="mt-1 text-sm">
+                                {{
+                                    (
+                                        respuesta.datos_faltantes ??
+                                        respuesta.preguntas_adicionales
+                                    )?.join(" · ")
+                                }}
+                            </p>
+                        </div></UCard
+                    >
+                </section>
 
-      <section class="grid gap-5 lg:grid-cols-2"><UCard><template #header><h2 class="font-bold">Servicios sugeridos</h2></template><p class="mb-3 text-xs text-muted">Deben confirmarse desde el catálogo antes de ser cobrables.</p><div class="flex flex-wrap gap-2"><UBadge v-for="servicio in respuesta.servicios_sugeridos" :key="servicio" color="primary" variant="subtle">{{servicio}}</UBadge></div></UCard><UCard><template #header><h2 class="font-bold">Repuestos posibles</h2></template><p class="mb-3 text-xs text-muted">No reservan ni descuentan inventario.</p><div v-if="respuesta.repuestos_posibles?.length" class="space-y-2"><div v-for="repuesto in respuesta.repuestos_posibles" :key="repuesto.nombre" class="flex items-start justify-between gap-3 rounded-lg border border-default p-3"><div><p class="font-medium">{{repuesto.nombre}} · {{repuesto.cantidad}}</p><p class="text-xs text-muted">{{repuesto.motivo}}</p></div><UBadge :color="colorNivel(repuesto.probabilidad_o_nivel)" variant="subtle">{{repuesto.probabilidad_o_nivel}}</UBadge></div></div><p v-else class="text-sm text-muted">Ningún repuesto debe asumirse antes de las pruebas.</p></UCard></section>
+                <section class="grid gap-5 lg:grid-cols-2">
+                    <UCard
+                        ><template #header
+                            ><h2 class="font-bold">
+                                Servicios sugeridos
+                            </h2></template
+                        >
+                        <p class="mb-3 text-xs text-muted">
+                            Deben confirmarse desde el catálogo antes de ser
+                            cobrables.
+                        </p>
+                        <div class="flex flex-wrap gap-2">
+                            <UBadge
+                                v-for="servicio in respuesta.servicios_sugeridos"
+                                :key="servicio"
+                                color="primary"
+                                variant="subtle"
+                                >{{ servicio }}</UBadge
+                            >
+                        </div></UCard
+                    ><UCard
+                        ><template #header
+                            ><h2 class="font-bold">
+                                Repuestos posibles
+                            </h2></template
+                        >
+                        <p class="mb-3 text-xs text-muted">
+                            No reservan ni descuentan inventario.
+                        </p>
+                        <div
+                            v-if="respuesta.repuestos_posibles?.length"
+                            class="space-y-2"
+                        >
+                            <div
+                                v-for="repuesto in respuesta.repuestos_posibles"
+                                :key="repuesto.nombre"
+                                class="flex items-start justify-between gap-3 rounded-lg border border-default p-3"
+                            >
+                                <div>
+                                    <p class="font-medium">
+                                        {{ repuesto.nombre }} ·
+                                        {{ repuesto.cantidad }}
+                                    </p>
+                                    <p class="text-xs text-muted">
+                                        {{ repuesto.motivo }}
+                                    </p>
+                                </div>
+                                <UBadge
+                                    :color="
+                                        colorNivel(
+                                            repuesto.probabilidad_o_nivel,
+                                        )
+                                    "
+                                    variant="subtle"
+                                    >{{ repuesto.probabilidad_o_nivel }}</UBadge
+                                >
+                            </div>
+                        </div>
+                        <p v-else class="text-sm text-muted">
+                            Ningún repuesto debe asumirse antes de las pruebas.
+                        </p></UCard
+                    >
+                </section>
 
-      <UCard><template #header><div class="flex items-center gap-2"><UIcon name="i-lucide-users" class="text-primary"/><div><h2 class="font-bold">Mecánico sugerido</h2><p class="text-xs text-muted">{{puedeRevisar?'Candidatos reales ordenados por especialidad, horario y carga actual.':'Asignación sugerida para la atención.'}}</p></div></div></template><div v-if="mecanicos.length" class="space-y-2"><article v-for="mecanico in mecanicos" :key="mecanico.id" class="rounded-xl border p-3" :class="mecanico.preferente?'border-success/40 bg-success/7':'border-default'"><div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div><div class="flex flex-wrap items-center gap-2"><p class="font-semibold">{{mecanico.nombre}}</p><UBadge v-if="mecanico.preferente" color="success" variant="subtle">Asignado preferente</UBadge></div><p class="text-xs text-muted">{{mecanico.especialidades.join(', ')}}</p></div><div v-if="puedeRevisar" class="flex flex-wrap gap-2 text-xs"><UBadge color="neutral" variant="outline">{{mecanico.ordenesActivas}} órdenes activas</UBadge><UBadge color="neutral" variant="outline">{{mecanico.citasFuturas}} citas próximas</UBadge><UBadge :color="mecanico.tieneHorario?'success':'warning'" variant="subtle">{{mecanico.tieneHorario?'Horario configurado':'Sin horario'}}</UBadge></div></div></article></div><div v-else class="rounded-lg border border-dashed border-default p-5 text-center"><p class="font-medium">No hay un candidato compatible disponible</p><p class="mt-1 text-sm text-muted">Confirma la especialidad o consulta el calendario antes de asignar.</p></div></UCard>
+                <UCard
+                    ><template #header
+                        ><div class="flex items-center gap-2">
+                            <UIcon name="i-lucide-users" class="text-primary" />
+                            <div>
+                                <h2 class="font-bold">Mecánico sugerido</h2>
+                                <p class="text-xs text-muted">
+                                    {{
+                                        puedeRevisar
+                                            ? "Candidatos reales ordenados por especialidad, horario y carga actual."
+                                            : "Asignación sugerida para la atención."
+                                    }}
+                                </p>
+                            </div>
+                        </div></template
+                    >
+                    <div v-if="mecanicos.length" class="space-y-2">
+                        <article
+                            v-for="mecanico in mecanicos"
+                            :key="mecanico.id"
+                            class="rounded-xl border p-3"
+                            :class="
+                                mecanico.preferente
+                                    ? 'border-success/40 bg-success/7'
+                                    : 'border-default'
+                            "
+                        >
+                            <div
+                                class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+                            >
+                                <div>
+                                    <div
+                                        class="flex flex-wrap items-center gap-2"
+                                    >
+                                        <p class="font-semibold">
+                                            {{ mecanico.nombre }}
+                                        </p>
+                                        <UBadge
+                                            v-if="mecanico.preferente"
+                                            color="success"
+                                            variant="subtle"
+                                            >Asignado preferente</UBadge
+                                        >
+                                    </div>
+                                    <p class="text-xs text-muted">
+                                        {{ mecanico.especialidades.join(", ") }}
+                                    </p>
+                                </div>
+                                <div
+                                    v-if="puedeRevisar"
+                                    class="flex flex-wrap gap-2 text-xs"
+                                >
+                                    <UBadge color="neutral" variant="outline"
+                                        >{{ mecanico.ordenesActivas }} órdenes
+                                        activas</UBadge
+                                    ><UBadge color="neutral" variant="outline"
+                                        >{{ mecanico.citasFuturas }} citas
+                                        próximas</UBadge
+                                    ><UBadge
+                                        :color="
+                                            mecanico.tieneHorario
+                                                ? 'success'
+                                                : 'warning'
+                                        "
+                                        variant="subtle"
+                                        >{{
+                                            mecanico.tieneHorario
+                                                ? "Horario configurado"
+                                                : "Sin horario"
+                                        }}</UBadge
+                                    >
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                    <div
+                        v-else
+                        class="rounded-lg border border-dashed border-default p-5 text-center"
+                    >
+                        <p class="font-medium">
+                            No hay un candidato compatible disponible
+                        </p>
+                        <p class="mt-1 text-sm text-muted">
+                            Confirma la especialidad o consulta el calendario
+                            antes de asignar.
+                        </p>
+                    </div></UCard
+                >
 
-      <UAlert :color="colorNivel(respuesta.nivel_riesgo)" icon="i-lucide-shield-alert" title="Riesgo, circulación y precauciones" :description="(respuesta.precauciones??respuesta.riesgos??[]).join(' ')||consulta.respuesta.advertencia"/>
+                <UAlert
+                    :color="colorNivel(respuesta.nivel_riesgo)"
+                    icon="i-lucide-shield-alert"
+                    title="Riesgo, circulación y precauciones"
+                    :description="
+                        (
+                            respuesta.precauciones ??
+                            respuesta.riesgos ??
+                            []
+                        ).join(' ') ||
+                        'No se registraron precauciones adicionales.'
+                    "
+                />
 
-      <UCard v-if="puedeRevisar&&!['confirmada','modificada','descartada','cerrada'].includes(consulta.estado)" id="revision-ia"><template #header><div><p class="font-mono text-xs uppercase tracking-wider text-primary">Confirmación humana</p><h2 class="mt-1 text-lg font-bold">Revisar diagnóstico preliminar</h2><p class="mt-1 text-sm text-muted">La respuesta original se conservará incluso si corriges el diagnóstico.</p></div></template>
-        <UFormField label="¿El diagnóstico IA coincide con tu análisis?" required><div class="grid gap-3 sm:grid-cols-2"><button type="button" class="rounded-xl border p-4 text-left" :class="revision.coincideIa?'border-success bg-success/10':'border-default'" @click="seleccionarCoincidencia(true)"><p class="font-semibold">Sí, coincide</p><p class="text-xs text-muted">Confirmaré con observaciones y pruebas.</p></button><button type="button" class="rounded-xl border p-4 text-left" :class="!revision.coincideIa?'border-warning bg-warning/10':'border-default'" @click="seleccionarCoincidencia(false)"><p class="font-semibold">No, difiere</p><p class="text-xs text-muted">Registraré la corrección y el motivo.</p></button></div></UFormField>
-        <div class="mt-5 grid gap-4 md:grid-cols-2"><UFormField class="md:col-span-2" label="Observaciones visibles para el cliente" required :error="errors.observacionesCliente"><UTextarea v-model="revision.observacionesCliente" rows="3" placeholder="Explica qué confirmaste, qué ajustarás y los próximos pasos." class="w-full"/></UFormField><UFormField label="Pruebas realizadas" :error="errors.pruebasRealizadas"><UTextarea v-model="revision.pruebasRealizadas" rows="3" class="w-full"/></UFormField><UFormField label="Notas internas" :error="errors.notasInternas"><UTextarea v-model="revision.notasInternas" rows="3" class="w-full"/></UFormField></div>
-        <div v-if="!revision.coincideIa" class="mt-5 grid gap-4 rounded-xl border border-warning/25 bg-warning/5 p-4 md:grid-cols-2"><UFormField v-if="revision.estado!=='descartada'" class="md:col-span-2" label="Diagnóstico técnico corregido" required :error="errors.diagnosticoCorregido"><UTextarea v-model="revision.diagnosticoCorregido" rows="4" class="w-full"/></UFormField><UFormField class="md:col-span-2" label="Motivo de la diferencia" required :error="errors.motivoDiferencia"><UTextarea v-model="revision.motivoDiferencia" rows="3" class="w-full"/></UFormField><UFormField v-if="revision.estado!=='descartada'" label="Servicio corregido" :error="errors.servicioCorregido"><UInput v-model="revision.servicioCorregido" class="w-full"/></UFormField><UFormField v-if="revision.estado!=='descartada'" label="Prioridad corregida" :error="errors.prioridadCorregida"><USelect v-model="revision.prioridadCorregida" :items="['baja','media','alta','critica']" class="w-full"/></UFormField><UFormField v-if="revision.estado!=='descartada'" class="md:col-span-2" label="Resumen ajustado para el cliente" :error="errors.resumenAjustado"><UTextarea v-model="revision.resumenAjustado" rows="3" class="w-full"/></UFormField></div>
-        <div class="mt-5 flex flex-wrap justify-end gap-2"><UButton :label="revision.estado==='descartada'?'Confirmar descarte':'Descartar'" color="error" variant="ghost" :loading="enviando" @click="revisar('descartada')"/><UButton v-if="revision.estado!=='descartada'" :label="revision.coincideIa?'Confirmar diagnóstico':'Modificar diagnóstico'" :icon="revision.coincideIa?'i-lucide-check-circle':'i-lucide-pencil'" :loading="enviando" @click="revisar()"/></div>
-      </UCard>
+                <UCard
+                    v-if="
+                        puedeRevisar &&
+                        ![
+                            'confirmada',
+                            'modificada',
+                            'descartada',
+                            'cerrada',
+                        ].includes(consulta.estado)
+                    "
+                    id="revision-ia"
+                    ><template #header
+                        ><div>
+                            <p
+                                class="font-mono text-xs uppercase tracking-wider text-primary"
+                            >
+                                Confirmación humana
+                            </p>
+                            <h2 class="mt-1 text-lg font-bold">
+                                Revisar diagnóstico preliminar
+                            </h2>
+                            <p class="mt-1 text-sm text-muted">
+                                La respuesta original se conservará incluso si
+                                corriges el diagnóstico.
+                            </p>
+                        </div></template
+                    >
+                    <UFormField
+                        label="¿El diagnóstico IA coincide con tu análisis?"
+                        required
+                        ><div class="grid gap-3 sm:grid-cols-2">
+                            <button
+                                type="button"
+                                class="rounded-xl border p-4 text-left"
+                                :class="
+                                    revision.coincideIa
+                                        ? 'border-success bg-success/10'
+                                        : 'border-default'
+                                "
+                                @click="seleccionarCoincidencia(true)"
+                            >
+                                <p class="font-semibold">Sí, coincide</p>
+                                <p class="text-xs text-muted">
+                                    Confirmaré con observaciones y pruebas.
+                                </p></button
+                            ><button
+                                type="button"
+                                class="rounded-xl border p-4 text-left"
+                                :class="
+                                    !revision.coincideIa
+                                        ? 'border-warning bg-warning/10'
+                                        : 'border-default'
+                                "
+                                @click="seleccionarCoincidencia(false)"
+                            >
+                                <p class="font-semibold">No, difiere</p>
+                                <p class="text-xs text-muted">
+                                    Registraré la corrección y el motivo.
+                                </p>
+                            </button>
+                        </div></UFormField
+                    >
+                    <div class="mt-5 grid gap-4 md:grid-cols-2">
+                        <UFormField
+                            class="md:col-span-2"
+                            label="Observaciones visibles para el cliente"
+                            required
+                            :error="errors.observacionesCliente"
+                            ><UTextarea
+                                v-model="revision.observacionesCliente"
+                                rows="3"
+                                placeholder="Explica qué confirmaste, qué ajustarás y los próximos pasos."
+                                class="w-full" /></UFormField
+                        ><UFormField
+                            label="Pruebas realizadas"
+                            :error="errors.pruebasRealizadas"
+                            ><UTextarea
+                                v-model="revision.pruebasRealizadas"
+                                rows="3"
+                                class="w-full" /></UFormField
+                        ><UFormField
+                            label="Notas internas"
+                            :error="errors.notasInternas"
+                            ><UTextarea
+                                v-model="revision.notasInternas"
+                                rows="3"
+                                class="w-full"
+                        /></UFormField>
+                    </div>
+                    <div
+                        v-if="!revision.coincideIa"
+                        class="mt-5 grid gap-4 rounded-xl border border-warning/25 bg-warning/5 p-4 md:grid-cols-2"
+                    >
+                        <UFormField
+                            v-if="revision.estado !== 'descartada'"
+                            class="md:col-span-2"
+                            label="Diagnóstico técnico corregido"
+                            required
+                            :error="errors.diagnosticoCorregido"
+                            ><UTextarea
+                                v-model="revision.diagnosticoCorregido"
+                                rows="4"
+                                class="w-full" /></UFormField
+                        ><UFormField
+                            class="md:col-span-2"
+                            label="Motivo de la diferencia"
+                            required
+                            :error="errors.motivoDiferencia"
+                            ><UTextarea
+                                v-model="revision.motivoDiferencia"
+                                rows="3"
+                                class="w-full" /></UFormField
+                        ><UFormField
+                            v-if="revision.estado !== 'descartada'"
+                            label="Servicio corregido"
+                            :error="errors.servicioCorregido"
+                            ><UInput
+                                v-model="revision.servicioCorregido"
+                                class="w-full" /></UFormField
+                        ><UFormField
+                            v-if="revision.estado !== 'descartada'"
+                            label="Prioridad corregida"
+                            :error="errors.prioridadCorregida"
+                            ><USelect
+                                v-model="revision.prioridadCorregida"
+                                :items="['baja', 'media', 'alta', 'critica']"
+                                class="w-full" /></UFormField
+                        ><UFormField
+                            v-if="revision.estado !== 'descartada'"
+                            class="md:col-span-2"
+                            label="Resumen ajustado para el cliente"
+                            :error="errors.resumenAjustado"
+                            ><UTextarea
+                                v-model="revision.resumenAjustado"
+                                rows="3"
+                                class="w-full"
+                        /></UFormField>
+                    </div>
+                    <div class="mt-5 flex flex-wrap justify-end gap-2">
+                        <UButton
+                            :label="
+                                revision.estado === 'descartada'
+                                    ? 'Confirmar descarte'
+                                    : 'Descartar'
+                            "
+                            color="error"
+                            variant="ghost"
+                            :loading="enviando"
+                            @click="revisar('descartada')"
+                        /><UButton
+                            v-if="revision.estado !== 'descartada'"
+                            :label="
+                                revision.coincideIa
+                                    ? 'Confirmar diagnóstico'
+                                    : 'Modificar diagnóstico'
+                            "
+                            :icon="
+                                revision.coincideIa
+                                    ? 'i-lucide-check-circle'
+                                    : 'i-lucide-pencil'
+                            "
+                            :loading="enviando"
+                            @click="revisar()"
+                        />
+                    </div>
+                </UCard>
 
-      <div class="flex flex-wrap gap-2"><Link v-if="!consulta.citaId&&!['descartada','cerrada'].includes(consulta.estado)&&can('citas.crear')" :href="route('citas.create',{consultaIa:consulta.id})"><UButton label="Agendar cita con estos datos" icon="i-lucide-calendar-plus" color="neutral" variant="outline"/></Link><Link v-if="can('citas.ver')" :href="route('citas.calendario')"><UButton label="Ver calendario" icon="i-lucide-calendar-days" color="neutral" variant="outline"/></Link><Link v-if="consulta.ordenId&&can('ordenes.ver')" :href="route('ordenes.show',consulta.ordenId)"><UButton label="Ir a la orden" icon="i-lucide-arrow-right"/></Link><Link :href="route('ia.index')"><UButton label="Volver" color="neutral" variant="ghost"/></Link></div>
-      <p class="text-[10px] text-dimmed">Prompt {{consulta.promptVersion}} · Esquema {{consulta.esquemaVersion}} · La respuesta original permanece conservada.</p>
-    </div></template>
-  </UDashboardPanel>
+                <div class="flex flex-wrap gap-2">
+                    <Link
+                        v-if="
+                            !consulta.citaId &&
+                            !['descartada', 'cerrada'].includes(
+                                consulta.estado,
+                            ) &&
+                            can('citas.crear')
+                        "
+                        :href="
+                            route('citas.create', { consultaIa: consulta.id })
+                        "
+                        ><UButton
+                            label="Agendar cita con estos datos"
+                            icon="i-lucide-calendar-plus"
+                            color="neutral"
+                            variant="outline" /></Link
+                    ><Link
+                        v-if="can('citas.ver')"
+                        :href="route('citas.calendario')"
+                        ><UButton
+                            label="Ver calendario"
+                            icon="i-lucide-calendar-days"
+                            color="neutral"
+                            variant="outline" /></Link
+                    ><Link
+                        v-if="consulta.ordenId && can('ordenes.ver')"
+                        :href="route('ordenes.show', consulta.ordenId)"
+                        ><UButton
+                            label="Ir a la orden"
+                            icon="i-lucide-arrow-right" /></Link
+                    ><Link :href="route('ia.index')"
+                        ><UButton
+                            label="Volver"
+                            color="neutral"
+                            variant="ghost"
+                    /></Link>
+                </div>
+                <p class="text-[10px] text-dimmed">
+                    Prompt {{ consulta.promptVersion }} · Esquema
+                    {{ consulta.esquemaVersion }} · La respuesta original
+                    permanece conservada.
+                </p>
+            </div></template
+        >
+    </UDashboardPanel>
 </template>

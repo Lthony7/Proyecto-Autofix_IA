@@ -1,65 +1,1131 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
-import { Head, Link, router } from '@inertiajs/vue3'
-import { route } from 'ziggy-js'
-import { usePermissions } from '../../composables/usePermissions'
+import { computed, reactive, ref } from "vue";
+import { Head, Link, router } from "@inertiajs/vue3";
+import { route } from "ziggy-js";
+import { usePermissions } from "../../composables/usePermissions";
 
-interface Catalogo {id:string;nombre:string;cliente_id?:string}
-interface Orden {id:string;numero:string;estado:string;cliente:string;placa:string;recibida_en?:string;finalizada_en?:string}
-const props=defineProps<{
-  resumen:{totalOrdenes:number;pendientes:number;finalizadas:number;ingresos:string|null;servicios:number;repuestos:string}
-  ordenesPendientes:Orden[];ordenesFinalizadas:Orden[];ingresos:any[];serviciosSolicitados:any[];repuestosUtilizados:any[];vehiculosPorCliente:any[]
-  ordenesPorEstado:{estado:string;total:number}[];iaPorEstado:{estado:string;total:number}[]
-  inventario:{activos:number;ok:number;bajos:number;agotados:number;stockBajo:any[]}
-  filtros:{desde:string;hasta:string;estado?:string;mecanico?:string;cliente?:string;vehiculo?:string;servicio?:string}
-  puedeVerIngresos:boolean;puedeExportar:boolean;catalogos:{clientes:Catalogo[];vehiculos:Catalogo[];mecanicos:Catalogo[];servicios:Catalogo[]}
-}>()
-const {can,canAny}=usePermissions()
-const exportaciones=ref(false)
-const filtros=reactive({desde:props.filtros.desde,hasta:props.filtros.hasta,estado:props.filtros.estado||'todos',mecanico:props.filtros.mecanico||'todos',cliente:props.filtros.cliente||'todos',vehiculo:props.filtros.vehiculo||'todos',servicio:props.filtros.servicio||'todos'})
-const estados=[{label:'Todos los estados',value:'todos'},{label:'Pendiente',value:'pendiente'},{label:'En diagnóstico',value:'en_diagnostico'},{label:'En reparación',value:'en_reparacion'},{label:'Finalizada',value:'finalizada'},{label:'Entregada',value:'entregada'},{label:'Cancelada',value:'cancelada'}]
-const vehiculos=computed(()=>props.catalogos.vehiculos.filter(v=>filtros.cliente==='todos'||v.cliente_id===filtros.cliente))
-const parametros=computed(()=>({desde:filtros.desde,hasta:filtros.hasta,estado:filtros.estado==='todos'?undefined:filtros.estado,mecanico:filtros.mecanico==='todos'?undefined:filtros.mecanico,cliente:filtros.cliente==='todos'?undefined:filtros.cliente,vehiculo:filtros.vehiculo==='todos'?undefined:filtros.vehiculo,servicio:filtros.servicio==='todos'?undefined:filtros.servicio}))
-const maxIngreso=computed(()=>Math.max(1,...props.ingresos.map(i=>Number(i.total))))
-const maxServicio=computed(()=>Math.max(1,...props.serviciosSolicitados.map(i=>Number(i.solicitudes))))
+interface Catalogo {
+    id: string;
+    nombre: string;
+    cliente_id?: string;
+}
+interface Orden {
+    id: string;
+    numero: string;
+    estado: string;
+    cliente: string;
+    placa: string;
+    recibida_en?: string;
+    finalizada_en?: string;
+}
+const props = defineProps<{
+    resumen: {
+        totalOrdenes: number;
+        pendientes: number;
+        enReparacion: number;
+        finalizadas: number;
+        totalIa: number;
+        ingresos: string | null;
+        servicios: number;
+        repuestos: string;
+    };
+    ordenesPendientes: Orden[];
+    ordenesEnReparacion: Orden[];
+    ordenesFinalizadas: Orden[];
+    ingresos: any[];
+    serviciosSolicitados: any[];
+    repuestosUtilizados: any[];
+    vehiculosPorCliente: any[];
+    ordenesPorEstado: { estado: string; total: number }[];
+    iaPorEstado: { estado: string; total: number }[];
+    inventario: {
+        activos: number;
+        ok: number;
+        bajos: number;
+        agotados: number;
+        stockBajo: any[];
+    };
+    filtros: {
+        desde: string;
+        hasta: string;
+        estado?: string;
+        mecanico?: string;
+        cliente?: string;
+        vehiculo?: string;
+        servicio?: string;
+    };
+    puedeVerIngresos: boolean;
+    puedeExportar: boolean;
+    capacidades: {
+        ingresos: boolean;
+        valores: boolean;
+        ia: boolean;
+        inventario: boolean;
+        clientes: boolean;
+    };
+    catalogos: {
+        clientes: Catalogo[];
+        vehiculos: Catalogo[];
+        mecanicos: Catalogo[];
+        servicios: Catalogo[];
+    };
+}>();
+const { can, canAny } = usePermissions();
+const exportaciones = ref(false);
+const filtros = reactive({
+    desde: props.filtros.desde,
+    hasta: props.filtros.hasta,
+    estado: props.filtros.estado || "todos",
+    mecanico: props.filtros.mecanico || "todos",
+    cliente: props.filtros.cliente || "todos",
+    vehiculo: props.filtros.vehiculo || "todos",
+    servicio: props.filtros.servicio || "todos",
+});
+const estados = [
+    { label: "Todos los estados", value: "todos" },
+    ...[
+        "pendiente",
+        "asignada",
+        "en_diagnostico",
+        "esperando_aprobacion",
+        "esperando_repuestos",
+        "en_reparacion",
+        "pausada",
+        "en_prueba",
+        "finalizada",
+        "lista_entrega",
+        "entregada",
+        "cancelada",
+    ].map((value) => ({ label: value.replaceAll("_", " "), value })),
+];
+const vehiculos = computed(() =>
+    props.catalogos.vehiculos.filter(
+        (v) => filtros.cliente === "todos" || v.cliente_id === filtros.cliente,
+    ),
+);
+const parametros = computed(() => ({
+    desde: filtros.desde,
+    hasta: filtros.hasta,
+    estado: filtros.estado === "todos" ? undefined : filtros.estado,
+    mecanico: filtros.mecanico === "todos" ? undefined : filtros.mecanico,
+    cliente: filtros.cliente === "todos" ? undefined : filtros.cliente,
+    vehiculo: filtros.vehiculo === "todos" ? undefined : filtros.vehiculo,
+    servicio: filtros.servicio === "todos" ? undefined : filtros.servicio,
+}));
+const maxIngreso = computed(() =>
+    Math.max(1, ...props.ingresos.map((i) => Number(i.total))),
+);
+const maxServicio = computed(() =>
+    Math.max(
+        1,
+        ...props.serviciosSolicitados.map((i) => Number(i.solicitudes)),
+    ),
+);
 
-function consultar(){router.get(route('reportes.index'),parametros.value,{preserveState:true,replace:true})}
-function limpiar(){const hoy=new Date();const inicio=new Date(hoy.getFullYear(),hoy.getMonth(),1);Object.assign(filtros,{desde:fechaClave(inicio),hasta:fechaClave(hoy),estado:'todos',mecanico:'todos',cliente:'todos',vehiculo:'todos',servicio:'todos'});consultar()}
-function periodo(dias:number){const hasta=new Date();const desde=new Date();desde.setDate(hasta.getDate()-dias+1);filtros.desde=fechaClave(desde);filtros.hasta=fechaClave(hasta);consultar()}
-function fechaClave(fecha:Date){return new Date(fecha.getTime()-fecha.getTimezoneOffset()*60000).toISOString().slice(0,10)}
-function exportar(tipo:string){window.location.href=route('reportes.exportar',{...parametros.value,tipo})}
-function dinero(valor:string|number){return Number(valor).toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2})}
-function fecha(valor?:string){return valor?new Date(valor).toLocaleDateString('es-CO'):'-'}
-function estadoColor(estado:string):'success'|'warning'|'error'|'primary'|'neutral'{if(['finalizada','entregada','confirmada'].includes(estado))return'success';if(['pendiente','en_diagnostico','generada','en_revision'].includes(estado))return'warning';if(['cancelada','descartada'].includes(estado))return'error';if(['en_reparacion','modificada'].includes(estado))return'primary';return'neutral'}
+function consultar() {
+    router.get(route("reportes.index"), parametros.value, {
+        preserveState: true,
+        replace: true,
+    });
+}
+function limpiar() {
+    const hoy = new Date();
+    const inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    Object.assign(filtros, {
+        desde: fechaClave(inicio),
+        hasta: fechaClave(hoy),
+        estado: "todos",
+        mecanico: "todos",
+        cliente: "todos",
+        vehiculo: "todos",
+        servicio: "todos",
+    });
+    consultar();
+}
+function periodo(dias: number) {
+    const hasta = new Date();
+    const desde = new Date();
+    desde.setDate(hasta.getDate() - dias + 1);
+    filtros.desde = fechaClave(desde);
+    filtros.hasta = fechaClave(hasta);
+    consultar();
+}
+function fechaClave(fecha: Date) {
+    return new Date(fecha.getTime() - fecha.getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 10);
+}
+function exportar(tipo: string) {
+    window.location.href = route("reportes.exportar", {
+        ...parametros.value,
+        tipo,
+    });
+}
+function dinero(valor: string | number) {
+    return Number(valor).toLocaleString("es-CO", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+}
+function fecha(valor?: string) {
+    return valor ? new Date(valor).toLocaleDateString("es-CO") : "-";
+}
+function estadoColor(
+    estado: string,
+): "success" | "warning" | "error" | "primary" | "neutral" {
+    if (["finalizada", "entregada", "confirmada"].includes(estado))
+        return "success";
+    if (
+        ["pendiente", "en_diagnostico", "generada", "en_revision"].includes(
+            estado,
+        )
+    )
+        return "warning";
+    if (["cancelada", "descartada"].includes(estado)) return "error";
+    if (["en_reparacion", "modificada"].includes(estado)) return "primary";
+    return "neutral";
+}
 </script>
 
 <template>
-  <Head title="Reportes"/>
-  <UDashboardPanel>
-    <template #header><UDashboardNavbar title="Reportes"><template #leading><UDashboardSidebarCollapse/></template><template #right><Link v-if="can('inventario.ver')" :href="route('inventario.index')"><UButton label="Inventario" icon="i-lucide-package" color="success" variant="soft"/></Link><Link v-if="canAny(['ia.solicitar','ia.revisar'])" :href="route('ia.index')"><UButton label="Diagnóstico IA" icon="i-lucide-brain-circuit" color="neutral" variant="outline"/></Link><UButton v-if="puedeExportar" label="Exportar" icon="i-lucide-download" color="neutral" variant="outline" @click="exportaciones=true"/></template></UDashboardNavbar></template>
-    <template #body><div class="flex flex-col gap-6">
-      <UCard><template #header><div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"><div><h2 class="font-bold">Filtros globales</h2><p class="text-sm text-muted">Todos los indicadores, tablas y exportaciones respetan estos criterios.</p></div><div class="flex flex-wrap gap-2"><UButton label="Hoy" size="xs" color="neutral" variant="outline" @click="periodo(1)"/><UButton label="7 días" size="xs" color="neutral" variant="outline" @click="periodo(7)"/><UButton label="30 días" size="xs" color="neutral" variant="outline" @click="periodo(30)"/></div></div></template><form class="grid gap-3 md:grid-cols-2 xl:grid-cols-4" @submit.prevent="consultar"><UFormField label="Desde"><UInput v-model="filtros.desde" type="date" class="w-full"/></UFormField><UFormField label="Hasta"><UInput v-model="filtros.hasta" type="date" class="w-full"/></UFormField><UFormField label="Estado"><USelect v-model="filtros.estado" :items="estados" class="w-full"/></UFormField><UFormField label="Mecánico"><USelect v-model="filtros.mecanico" :items="[{label:'Todos los mecánicos',value:'todos'},...catalogos.mecanicos.map(i=>({label:i.nombre,value:i.id}))]" class="w-full"/></UFormField><UFormField label="Cliente"><USelect v-model="filtros.cliente" :items="[{label:'Todos los clientes',value:'todos'},...catalogos.clientes.map(i=>({label:i.nombre,value:i.id}))]" class="w-full" @update:model-value="filtros.vehiculo='todos'"/></UFormField><UFormField label="Vehículo"><USelect v-model="filtros.vehiculo" :items="[{label:'Todos los vehículos',value:'todos'},...vehiculos.map(i=>({label:i.nombre,value:i.id}))]" class="w-full"/></UFormField><UFormField label="Servicio"><USelect v-model="filtros.servicio" :items="[{label:'Todos los servicios',value:'todos'},...catalogos.servicios.map(i=>({label:i.nombre,value:i.id}))]" class="w-full"/></UFormField><div class="flex items-end gap-2"><UButton type="submit" label="Actualizar" icon="i-lucide-refresh-cw" class="flex-1"/><UButton type="button" icon="i-lucide-rotate-ccw" color="neutral" variant="ghost" aria-label="Restablecer" @click="limpiar"/></div></form></UCard>
+    <Head title="Reportes" />
+    <UDashboardPanel>
+        <template #header
+            ><UDashboardNavbar title="Reportes"
+                ><template #leading><UDashboardSidebarCollapse /></template
+                ><template #right
+                    ><Link
+                        v-if="can('inventario.ver')"
+                        :href="route('inventario.index')"
+                        ><UButton
+                            label="Inventario"
+                            icon="i-lucide-package"
+                            color="success"
+                            variant="soft" /></Link
+                    ><Link
+                        v-if="canAny(['ia.solicitar', 'ia.revisar'])"
+                        :href="route('ia.index')"
+                        ><UButton
+                            label="Diagnóstico IA"
+                            icon="i-lucide-brain-circuit"
+                            color="neutral"
+                            variant="outline" /></Link
+                    ><UButton
+                        v-if="puedeExportar"
+                        label="Exportar"
+                        icon="i-lucide-download"
+                        color="neutral"
+                        variant="outline"
+                        @click="
+                            exportaciones = true
+                        " /></template></UDashboardNavbar
+        ></template>
+        <template #body
+            ><div class="flex flex-col gap-6">
+                <UCard
+                    ><template #header
+                        ><div
+                            class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
+                        >
+                            <div>
+                                <h2 class="font-bold">Filtros globales</h2>
+                                <p class="text-sm text-muted">
+                                    Todos los indicadores, tablas y
+                                    exportaciones respetan estos criterios.
+                                </p>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <UButton
+                                    label="Hoy"
+                                    size="xs"
+                                    color="neutral"
+                                    variant="outline"
+                                    @click="periodo(1)"
+                                /><UButton
+                                    label="7 días"
+                                    size="xs"
+                                    color="neutral"
+                                    variant="outline"
+                                    @click="periodo(7)"
+                                /><UButton
+                                    label="30 días"
+                                    size="xs"
+                                    color="neutral"
+                                    variant="outline"
+                                    @click="periodo(30)"
+                                />
+                            </div></div
+                    ></template>
+                    <form
+                        class="grid gap-3 md:grid-cols-2 xl:grid-cols-4"
+                        @submit.prevent="consultar"
+                    >
+                        <UFormField label="Desde"
+                            ><UInput
+                                v-model="filtros.desde"
+                                type="date"
+                                class="w-full" /></UFormField
+                        ><UFormField label="Hasta"
+                            ><UInput
+                                v-model="filtros.hasta"
+                                type="date"
+                                class="w-full" /></UFormField
+                        ><UFormField label="Estado"
+                            ><USelect
+                                v-model="filtros.estado"
+                                :items="estados"
+                                class="w-full" /></UFormField
+                        ><UFormField label="Mecánico"
+                            ><USelect
+                                v-model="filtros.mecanico"
+                                :items="[
+                                    {
+                                        label: 'Todos los mecánicos',
+                                        value: 'todos',
+                                    },
+                                    ...catalogos.mecanicos.map((i) => ({
+                                        label: i.nombre,
+                                        value: i.id,
+                                    })),
+                                ]"
+                                class="w-full" /></UFormField
+                        ><UFormField label="Cliente"
+                            ><USelect
+                                v-model="filtros.cliente"
+                                :items="[
+                                    {
+                                        label: 'Todos los clientes',
+                                        value: 'todos',
+                                    },
+                                    ...catalogos.clientes.map((i) => ({
+                                        label: i.nombre,
+                                        value: i.id,
+                                    })),
+                                ]"
+                                class="w-full"
+                                @update:model-value="
+                                    filtros.vehiculo = 'todos'
+                                " /></UFormField
+                        ><UFormField label="Vehículo"
+                            ><USelect
+                                v-model="filtros.vehiculo"
+                                :items="[
+                                    {
+                                        label: 'Todos los vehículos',
+                                        value: 'todos',
+                                    },
+                                    ...vehiculos.map((i) => ({
+                                        label: i.nombre,
+                                        value: i.id,
+                                    })),
+                                ]"
+                                class="w-full" /></UFormField
+                        ><UFormField label="Servicio"
+                            ><USelect
+                                v-model="filtros.servicio"
+                                :items="[
+                                    {
+                                        label: 'Todos los servicios',
+                                        value: 'todos',
+                                    },
+                                    ...catalogos.servicios.map((i) => ({
+                                        label: i.nombre,
+                                        value: i.id,
+                                    })),
+                                ]"
+                                class="w-full"
+                        /></UFormField>
+                        <div class="flex items-end gap-2">
+                            <UButton
+                                type="submit"
+                                label="Actualizar"
+                                icon="i-lucide-refresh-cw"
+                                class="flex-1"
+                            /><UButton
+                                type="button"
+                                icon="i-lucide-rotate-ccw"
+                                color="neutral"
+                                variant="ghost"
+                                aria-label="Restablecer"
+                                @click="limpiar"
+                            />
+                        </div></form
+                ></UCard>
 
-      <section class="order-first grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <article class="rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 p-5 text-white shadow-lg shadow-emerald-500/20"><div class="flex items-center gap-4"><span class="grid size-12 place-items-center rounded-full bg-white/15"><UIcon name="i-lucide-clipboard-list" class="size-6"/></span><div><p class="text-sm font-bold">Total órdenes</p><p class="font-mono text-3xl font-black">{{resumen.totalOrdenes}}</p></div></div><p class="mt-3 text-xs text-white/75">{{resumen.pendientes}} activas · {{resumen.finalizadas}} finalizadas</p></article>
-        <article v-if="puedeVerIngresos" class="rounded-2xl bg-gradient-to-br from-green-500 to-green-700 p-5 text-white shadow-lg shadow-green-500/20"><div class="flex items-center gap-4"><span class="grid size-12 place-items-center rounded-full bg-white/15"><UIcon name="i-lucide-wallet-cards" class="size-6"/></span><div><p class="text-sm font-bold">Ingresos pagados</p><p class="font-mono text-2xl font-black">$ {{dinero(resumen.ingresos||0)}}</p></div></div><p class="mt-3 text-xs text-white/75">Solo pagos vigentes del periodo.</p></article>
-        <article class="rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 p-5 text-white shadow-lg shadow-blue-500/20"><div class="flex items-center gap-4"><span class="grid size-12 place-items-center rounded-full bg-white/15"><UIcon name="i-lucide-package" class="size-6"/></span><div><p class="text-sm font-bold">Ítems activos</p><p class="font-mono text-3xl font-black">{{inventario.activos}}</p></div></div><p class="mt-3 text-xs text-white/75">{{inventario.ok}} referencias con stock correcto.</p></article>
-        <article class="rounded-2xl bg-gradient-to-br from-rose-500 to-red-700 p-5 text-white shadow-lg shadow-red-500/20"><div class="flex items-center gap-4"><span class="grid size-12 place-items-center rounded-full bg-white/15"><UIcon name="i-lucide-package-x" class="size-6"/></span><div><p class="text-sm font-bold">Bajo / agotado</p><p class="font-mono text-3xl font-black">{{inventario.bajos}} / {{inventario.agotados}}</p></div></div><p class="mt-3 text-xs text-white/75">Referencias que requieren atención.</p></article>
-      </section>
+                <section
+                    class="order-first grid gap-4 md:grid-cols-2 xl:grid-cols-4"
+                >
+                    <article
+                        class="rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 p-5 text-white shadow-lg shadow-emerald-500/20"
+                    >
+                        <div class="flex items-center gap-4">
+                            <span
+                                class="grid size-12 place-items-center rounded-full bg-white/15"
+                                ><UIcon
+                                    name="i-lucide-clipboard-list"
+                                    class="size-6"
+                            /></span>
+                            <div>
+                                <p class="text-sm font-bold">Total órdenes</p>
+                                <p class="font-mono text-3xl font-black">
+                                    {{ resumen.totalOrdenes }}
+                                </p>
+                            </div>
+                        </div>
+                        <p class="mt-3 text-xs text-white/75">
+                            {{ resumen.pendientes }} activas ·
+                            {{ resumen.finalizadas }} finalizadas
+                        </p>
+                    </article>
+                    <article
+                        v-if="puedeVerIngresos"
+                        class="rounded-2xl bg-gradient-to-br from-green-500 to-green-700 p-5 text-white shadow-lg shadow-green-500/20"
+                    >
+                        <div class="flex items-center gap-4">
+                            <span
+                                class="grid size-12 place-items-center rounded-full bg-white/15"
+                                ><UIcon
+                                    name="i-lucide-wallet-cards"
+                                    class="size-6"
+                            /></span>
+                            <div>
+                                <p class="text-sm font-bold">
+                                    Ingresos pagados
+                                </p>
+                                <p class="font-mono text-2xl font-black">
+                                    $ {{ dinero(resumen.ingresos || 0) }}
+                                </p>
+                            </div>
+                        </div>
+                        <p class="mt-3 text-xs text-white/75">
+                            Movimientos netos: ingresos menos anulaciones y
+                            reembolsos.
+                        </p>
+                    </article>
+                    <article
+                        v-if="capacidades.inventario"
+                        class="rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 p-5 text-white shadow-lg shadow-blue-500/20"
+                    >
+                        <div class="flex items-center gap-4">
+                            <span
+                                class="grid size-12 place-items-center rounded-full bg-white/15"
+                                ><UIcon name="i-lucide-package" class="size-6"
+                            /></span>
+                            <div>
+                                <p class="text-sm font-bold">Ítems activos</p>
+                                <p class="font-mono text-3xl font-black">
+                                    {{ inventario.activos }}
+                                </p>
+                            </div>
+                        </div>
+                        <p class="mt-3 text-xs text-white/75">
+                            {{ inventario.ok }} referencias con stock correcto.
+                        </p>
+                    </article>
+                    <article
+                        v-if="capacidades.inventario"
+                        class="rounded-2xl bg-gradient-to-br from-rose-500 to-red-700 p-5 text-white shadow-lg shadow-red-500/20"
+                    >
+                        <div class="flex items-center gap-4">
+                            <span
+                                class="grid size-12 place-items-center rounded-full bg-white/15"
+                                ><UIcon
+                                    name="i-lucide-package-x"
+                                    class="size-6"
+                            /></span>
+                            <div>
+                                <p class="text-sm font-bold">Bajo / agotado</p>
+                                <p class="font-mono text-3xl font-black">
+                                    {{ inventario.bajos }} /
+                                    {{ inventario.agotados }}
+                                </p>
+                            </div>
+                        </div>
+                        <p class="mt-3 text-xs text-white/75">
+                            Referencias que requieren atención.
+                        </p>
+                    </article>
+                </section>
 
-      <UCard><template #header><div class="flex items-center justify-between gap-3"><div><h2 class="font-bold">Inventario con stock bajo</h2><p class="text-sm text-muted">Incluye referencias agotadas o en su mínimo.</p></div><Link v-if="can('inventario.ver')" :href="route('inventario.index',{bajo:1,estado:'activo'})"><UButton label="Gestionar inventario" icon="i-lucide-package-search" color="success" variant="soft"/></Link></div></template><div class="overflow-x-auto"><table class="w-full min-w-[700px] text-sm"><thead><tr class="border-b border-default text-left"><th class="p-3">Código</th><th class="p-3">Ítem</th><th class="p-3">Categoría</th><th class="p-3 text-right">Stock</th><th class="p-3 text-right">Mínimo</th><th class="p-3">Nivel</th></tr></thead><tbody><tr v-for="p in inventario.stockBajo" :key="p.id" class="border-b border-default"><td class="p-3"><Link :href="route('inventario.repuestos.show',p.id)" class="font-mono font-bold text-primary">{{p.codigo}}</Link></td><td class="p-3 font-medium">{{p.nombre}}</td><td class="p-3">{{p.categoria}}</td><td class="p-3 text-right font-mono">{{Number(p.stock_actual).toLocaleString('es-CO')}} {{p.unidad}}</td><td class="p-3 text-right font-mono">{{Number(p.stock_minimo).toLocaleString('es-CO')}}</td><td class="p-3"><UBadge :color="Number(p.stock_actual)<=0?'error':'warning'" variant="subtle">{{Number(p.stock_actual)<=0?'Agotado':'Bajo'}}</UBadge></td></tr><tr v-if="!inventario.stockBajo.length"><td colspan="6" class="p-8 text-center text-muted">Todo el inventario activo está por encima del mínimo.</td></tr></tbody></table></div></UCard>
+                <UCard v-if="capacidades.inventario"
+                    ><template #header
+                        ><div class="flex items-center justify-between gap-3">
+                            <div>
+                                <h2 class="font-bold">
+                                    Inventario con stock bajo
+                                </h2>
+                                <p class="text-sm text-muted">
+                                    Incluye referencias agotadas o en su mínimo.
+                                </p>
+                            </div>
+                            <Link
+                                v-if="can('inventario.ver')"
+                                :href="
+                                    route('inventario.index', {
+                                        bajo: 1,
+                                        estado: 'activo',
+                                    })
+                                "
+                                ><UButton
+                                    label="Gestionar inventario"
+                                    icon="i-lucide-package-search"
+                                    color="success"
+                                    variant="soft"
+                            /></Link></div
+                    ></template>
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[700px] text-sm">
+                            <thead>
+                                <tr class="border-b border-default text-left">
+                                    <th class="p-3">Código</th>
+                                    <th class="p-3">Ítem</th>
+                                    <th class="p-3">Categoría</th>
+                                    <th class="p-3 text-right">Stock</th>
+                                    <th class="p-3 text-right">Mínimo</th>
+                                    <th class="p-3">Nivel</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr
+                                    v-for="p in inventario.stockBajo"
+                                    :key="p.id"
+                                    class="border-b border-default"
+                                >
+                                    <td class="p-3">
+                                        <Link
+                                            :href="
+                                                route(
+                                                    'inventario.repuestos.show',
+                                                    p.id,
+                                                )
+                                            "
+                                            class="font-mono font-bold text-primary"
+                                            >{{ p.codigo }}</Link
+                                        >
+                                    </td>
+                                    <td class="p-3 font-medium">
+                                        {{ p.nombre }}
+                                    </td>
+                                    <td class="p-3">{{ p.categoria }}</td>
+                                    <td class="p-3 text-right font-mono">
+                                        {{
+                                            Number(
+                                                p.stock_actual,
+                                            ).toLocaleString("es-CO")
+                                        }}
+                                        {{ p.unidad }}
+                                    </td>
+                                    <td class="p-3 text-right font-mono">
+                                        {{
+                                            Number(
+                                                p.stock_minimo,
+                                            ).toLocaleString("es-CO")
+                                        }}
+                                    </td>
+                                    <td class="p-3">
+                                        <UBadge
+                                            :color="
+                                                Number(p.stock_actual) <= 0
+                                                    ? 'error'
+                                                    : 'warning'
+                                            "
+                                            variant="subtle"
+                                            >{{
+                                                Number(p.stock_actual) <= 0
+                                                    ? "Agotado"
+                                                    : "Bajo"
+                                            }}</UBadge
+                                        >
+                                    </td>
+                                </tr>
+                                <tr v-if="!inventario.stockBajo.length">
+                                    <td
+                                        colspan="6"
+                                        class="p-8 text-center text-muted"
+                                    >
+                                        Todo el inventario activo está por
+                                        encima del mínimo.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div></UCard
+                >
 
-      <section class="grid gap-6 xl:grid-cols-2"><UCard><template #header><div class="flex items-center gap-2"><UIcon name="i-lucide-clipboard-list" class="text-primary"/><h2 class="font-bold">Órdenes por estado</h2></div></template><div class="space-y-2"><div v-for="item in ordenesPorEstado" :key="item.estado" class="flex items-center justify-between rounded-lg border border-default px-3 py-2"><span class="capitalize">{{item.estado.replaceAll('_',' ')}}</span><UBadge :color="estadoColor(item.estado)" variant="subtle">{{item.total}}</UBadge></div><p v-if="!ordenesPorEstado.length" class="py-6 text-center text-muted">Sin órdenes en el periodo.</p></div></UCard><UCard><template #header><div class="flex items-center gap-2"><UIcon name="i-lucide-brain-circuit" class="text-primary"/><h2 class="font-bold">Diagnósticos IA por estado</h2></div></template><div class="space-y-2"><div v-for="item in iaPorEstado" :key="item.estado" class="flex items-center justify-between rounded-lg border border-default px-3 py-2"><span class="capitalize">{{item.estado.replaceAll('_',' ')}}</span><UBadge :color="estadoColor(item.estado)" variant="subtle">{{item.total}}</UBadge></div><p v-if="!iaPorEstado.length" class="py-6 text-center text-muted">Sin diagnósticos IA en el periodo.</p></div></UCard></section>
+                <section class="grid gap-6 xl:grid-cols-2">
+                    <UCard
+                        ><template #header
+                            ><div class="flex items-center gap-2">
+                                <UIcon
+                                    name="i-lucide-clipboard-list"
+                                    class="text-primary"
+                                />
+                                <h2 class="font-bold">Órdenes por estado</h2>
+                            </div></template
+                        >
+                        <div class="space-y-2">
+                            <div
+                                v-for="item in ordenesPorEstado"
+                                :key="item.estado"
+                                class="flex items-center justify-between rounded-lg border border-default px-3 py-2"
+                            >
+                                <span class="capitalize">{{
+                                    item.estado.replaceAll("_", " ")
+                                }}</span
+                                ><UBadge
+                                    :color="estadoColor(item.estado)"
+                                    variant="subtle"
+                                    >{{ item.total }}</UBadge
+                                >
+                            </div>
+                            <p
+                                v-if="!ordenesPorEstado.length"
+                                class="py-6 text-center text-muted"
+                            >
+                                Sin órdenes en el periodo.
+                            </p>
+                        </div></UCard
+                    ><UCard v-if="capacidades.ia"
+                        ><template #header
+                            ><div
+                                class="flex items-center justify-between gap-2"
+                            >
+                                <div class="flex items-center gap-2">
+                                    <UIcon
+                                        name="i-lucide-brain-circuit"
+                                        class="text-primary"
+                                    />
+                                    <h2 class="font-bold">
+                                        Diagnósticos IA por estado
+                                    </h2>
+                                </div>
+                                <UBadge color="primary" variant="subtle"
+                                    >{{ resumen.totalIa }} total</UBadge
+                                >
+                            </div></template
+                        >
+                        <div class="space-y-2">
+                            <div
+                                v-for="item in iaPorEstado"
+                                :key="item.estado"
+                                class="flex items-center justify-between rounded-lg border border-default px-3 py-2"
+                            >
+                                <span class="capitalize">{{
+                                    item.estado.replaceAll("_", " ")
+                                }}</span
+                                ><UBadge
+                                    :color="estadoColor(item.estado)"
+                                    variant="subtle"
+                                    >{{ item.total }}</UBadge
+                                >
+                            </div>
+                            <p
+                                v-if="!iaPorEstado.length"
+                                class="py-6 text-center text-muted"
+                            >
+                                Sin diagnósticos IA en el periodo.
+                            </p>
+                        </div></UCard
+                    >
+                </section>
 
-      <UCard v-if="puedeVerIngresos"><template #header><div class="flex items-center justify-between"><div><h2 class="font-bold">Ingresos por fecha</h2><p class="text-sm text-muted">Pagos registrados, excluyendo anulados y reembolsados.</p></div><UButton v-if="puedeExportar" label="CSV" icon="i-lucide-download" size="sm" color="neutral" variant="outline" @click="exportar('ingresos')"/></div></template><div class="space-y-3"><div v-for="i in ingresos" :key="i.fecha" class="grid gap-2 sm:grid-cols-[7rem_1fr_auto] sm:items-center"><span class="text-sm">{{fecha(`${i.fecha}T00:00:00`)}}</span><div class="h-3 overflow-hidden rounded-full bg-elevated"><div class="h-full rounded-full bg-gradient-to-r from-primary to-success" :style="{width:`${Math.max(3,Number(i.total)/maxIngreso*100)}%`}"/></div><span class="font-mono text-sm font-bold">$ {{dinero(i.total)}} · {{i.pagos}} pagos</span></div><p v-if="!ingresos.length" class="py-8 text-center text-muted">No hubo ingresos en el periodo.</p></div></UCard>
+                <UCard v-if="puedeVerIngresos"
+                    ><template #header
+                        ><div class="flex items-center justify-between">
+                            <div>
+                                <h2 class="font-bold">Ingresos por fecha</h2>
+                                <p class="text-sm text-muted">
+                                    Movimientos de caja inmutables del periodo.
+                                </p>
+                            </div>
+                            <UButton
+                                v-if="puedeExportar"
+                                label="CSV"
+                                icon="i-lucide-download"
+                                size="sm"
+                                color="neutral"
+                                variant="outline"
+                                @click="exportar('ingresos')"
+                            /></div
+                    ></template>
+                    <div class="space-y-3">
+                        <div
+                            v-for="i in ingresos"
+                            :key="i.fecha"
+                            class="grid gap-2 sm:grid-cols-[7rem_1fr_auto] sm:items-center"
+                        >
+                            <span class="text-sm">{{
+                                fecha(`${i.fecha}T00:00:00`)
+                            }}</span>
+                            <div
+                                class="h-3 overflow-hidden rounded-full bg-elevated"
+                            >
+                                <div
+                                    class="h-full rounded-full bg-gradient-to-r from-primary to-success"
+                                    :style="{
+                                        width: `${Math.max(3, (Number(i.total) / maxIngreso) * 100)}%`,
+                                    }"
+                                />
+                            </div>
+                            <span class="font-mono text-sm font-bold"
+                                >$ {{ dinero(i.total) }} ·
+                                {{ i.pagos }} pagos</span
+                            >
+                        </div>
+                        <p
+                            v-if="!ingresos.length"
+                            class="py-8 text-center text-muted"
+                        >
+                            No hubo ingresos en el periodo.
+                        </p>
+                    </div></UCard
+                >
 
-      <section class="grid gap-6 xl:grid-cols-2"><UCard><template #header><div class="flex items-center justify-between"><div><h2 class="font-bold">Órdenes activas</h2><p class="text-sm text-muted">Pendientes, diagnóstico y reparación.</p></div><UButton v-if="puedeExportar" label="CSV" size="xs" color="neutral" variant="outline" @click="exportar('ordenes_pendientes')"/></div></template><div class="overflow-x-auto"><table class="w-full min-w-[560px] text-sm"><thead><tr class="border-b border-default text-left"><th class="p-2">Orden</th><th class="p-2">Estado</th><th class="p-2">Cliente</th><th class="p-2">Placa</th><th class="p-2">Ingreso</th></tr></thead><tbody><tr v-for="o in ordenesPendientes" :key="o.id" class="border-b border-default"><td class="p-2"><Link :href="route('ordenes.show',o.id)" class="font-mono font-bold text-primary">{{o.numero}}</Link></td><td class="p-2"><UBadge :color="estadoColor(o.estado)" size="xs" variant="subtle">{{o.estado.replaceAll('_',' ')}}</UBadge></td><td class="p-2">{{o.cliente}}</td><td class="p-2">{{o.placa}}</td><td class="p-2">{{fecha(o.recibida_en)}}</td></tr></tbody></table><p v-if="!ordenesPendientes.length" class="py-8 text-center text-muted">Sin resultados.</p></div></UCard><UCard><template #header><div class="flex items-center justify-between"><div><h2 class="font-bold">Órdenes cerradas</h2><p class="text-sm text-muted">Finalizadas y entregadas.</p></div><UButton v-if="puedeExportar" label="CSV" size="xs" color="neutral" variant="outline" @click="exportar('ordenes_finalizadas')"/></div></template><div class="overflow-x-auto"><table class="w-full min-w-[520px] text-sm"><thead><tr class="border-b border-default text-left"><th class="p-2">Orden</th><th class="p-2">Estado</th><th class="p-2">Cliente</th><th class="p-2">Placa</th><th class="p-2">Finalización</th></tr></thead><tbody><tr v-for="o in ordenesFinalizadas" :key="o.id" class="border-b border-default"><td class="p-2"><Link :href="route('ordenes.show',o.id)" class="font-mono font-bold text-primary">{{o.numero}}</Link></td><td class="p-2"><UBadge color="success" size="xs" variant="subtle">{{o.estado}}</UBadge></td><td class="p-2">{{o.cliente}}</td><td class="p-2">{{o.placa}}</td><td class="p-2">{{fecha(o.finalizada_en)}}</td></tr></tbody></table><p v-if="!ordenesFinalizadas.length" class="py-8 text-center text-muted">Sin resultados.</p></div></UCard></section>
+                <section class="grid gap-6 xl:grid-cols-2">
+                    <UCard
+                        ><template #header
+                            ><div class="flex items-center justify-between">
+                                <div>
+                                    <h2 class="font-bold">Órdenes activas</h2>
+                                    <p class="text-sm text-muted">
+                                        Pendientes, diagnóstico y reparación.
+                                    </p>
+                                </div>
+                                <UButton
+                                    v-if="puedeExportar"
+                                    label="CSV"
+                                    size="xs"
+                                    color="neutral"
+                                    variant="outline"
+                                    @click="exportar('ordenes_pendientes')"
+                                /></div
+                        ></template>
+                        <div class="overflow-x-auto">
+                            <table class="w-full min-w-[560px] text-sm">
+                                <thead>
+                                    <tr
+                                        class="border-b border-default text-left"
+                                    >
+                                        <th class="p-2">Orden</th>
+                                        <th class="p-2">Estado</th>
+                                        <th class="p-2">Cliente</th>
+                                        <th class="p-2">Placa</th>
+                                        <th class="p-2">Ingreso</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr
+                                        v-for="o in ordenesPendientes"
+                                        :key="o.id"
+                                        class="border-b border-default"
+                                    >
+                                        <td class="p-2">
+                                            <Link
+                                                :href="
+                                                    route('ordenes.show', o.id)
+                                                "
+                                                class="font-mono font-bold text-primary"
+                                                >{{ o.numero }}</Link
+                                            >
+                                        </td>
+                                        <td class="p-2">
+                                            <UBadge
+                                                :color="estadoColor(o.estado)"
+                                                size="xs"
+                                                variant="subtle"
+                                                >{{
+                                                    o.estado.replaceAll(
+                                                        "_",
+                                                        " ",
+                                                    )
+                                                }}</UBadge
+                                            >
+                                        </td>
+                                        <td class="p-2">{{ o.cliente }}</td>
+                                        <td class="p-2">{{ o.placa }}</td>
+                                        <td class="p-2">
+                                            {{ fecha(o.recibida_en) }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <p
+                                v-if="!ordenesPendientes.length"
+                                class="py-8 text-center text-muted"
+                            >
+                                Sin resultados.
+                            </p>
+                        </div></UCard
+                    ><UCard
+                        ><template #header
+                            ><div class="flex items-center justify-between">
+                                <div>
+                                    <h2 class="font-bold">Órdenes cerradas</h2>
+                                    <p class="text-sm text-muted">
+                                        Finalizadas y entregadas.
+                                    </p>
+                                </div>
+                                <UButton
+                                    v-if="puedeExportar"
+                                    label="CSV"
+                                    size="xs"
+                                    color="neutral"
+                                    variant="outline"
+                                    @click="exportar('ordenes_finalizadas')"
+                                /></div
+                        ></template>
+                        <div class="overflow-x-auto">
+                            <table class="w-full min-w-[520px] text-sm">
+                                <thead>
+                                    <tr
+                                        class="border-b border-default text-left"
+                                    >
+                                        <th class="p-2">Orden</th>
+                                        <th class="p-2">Estado</th>
+                                        <th class="p-2">Cliente</th>
+                                        <th class="p-2">Placa</th>
+                                        <th class="p-2">Finalización</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr
+                                        v-for="o in ordenesFinalizadas"
+                                        :key="o.id"
+                                        class="border-b border-default"
+                                    >
+                                        <td class="p-2">
+                                            <Link
+                                                :href="
+                                                    route('ordenes.show', o.id)
+                                                "
+                                                class="font-mono font-bold text-primary"
+                                                >{{ o.numero }}</Link
+                                            >
+                                        </td>
+                                        <td class="p-2">
+                                            <UBadge
+                                                color="success"
+                                                size="xs"
+                                                variant="subtle"
+                                                >{{ o.estado }}</UBadge
+                                            >
+                                        </td>
+                                        <td class="p-2">{{ o.cliente }}</td>
+                                        <td class="p-2">{{ o.placa }}</td>
+                                        <td class="p-2">
+                                            {{ fecha(o.finalizada_en) }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <p
+                                v-if="!ordenesFinalizadas.length"
+                                class="py-8 text-center text-muted"
+                            >
+                                Sin resultados.
+                            </p>
+                        </div></UCard
+                    >
+                </section>
 
-      <section class="grid gap-6 xl:grid-cols-2"><UCard><template #header><div class="flex items-center justify-between"><h2 class="font-bold">Servicios más solicitados</h2><UButton v-if="puedeExportar" label="CSV" size="xs" color="neutral" variant="outline" @click="exportar('servicios')"/></div></template><div class="space-y-3"><div v-for="s in serviciosSolicitados" :key="s.nombre"><div class="mb-1 flex justify-between gap-3 text-sm"><span class="font-medium">{{s.nombre}}</span><span>{{s.solicitudes}} solicitudes · {{s.completados}} completados</span></div><div class="h-2 rounded-full bg-elevated"><div class="h-full rounded-full bg-primary" :style="{width:`${Math.max(3,Number(s.solicitudes)/maxServicio*100)}%`}"/></div></div><p v-if="!serviciosSolicitados.length" class="py-8 text-center text-muted">Sin servicios en el periodo.</p></div></UCard><UCard><template #header><div class="flex items-center justify-between"><h2 class="font-bold">Repuestos utilizados</h2><UButton v-if="puedeExportar" label="CSV" size="xs" color="neutral" variant="outline" @click="exportar('repuestos')"/></div></template><div class="overflow-x-auto"><table class="w-full min-w-[520px] text-sm"><thead><tr class="border-b border-default text-left"><th class="p-2">Código</th><th class="p-2">Repuesto</th><th class="p-2 text-right">Cantidad</th><th class="p-2 text-right">Órdenes</th><th class="p-2 text-right">Valor</th></tr></thead><tbody><tr v-for="p in repuestosUtilizados" :key="p.codigo" class="border-b border-default"><td class="p-2 font-mono text-primary">{{p.codigo}}</td><td class="p-2">{{p.nombre}}</td><td class="p-2 text-right">{{Number(p.cantidad).toLocaleString('es-CO')}} {{p.unidad}}</td><td class="p-2 text-right">{{p.ordenes}}</td><td class="p-2 text-right">$ {{dinero(p.valor)}}</td></tr></tbody></table><p v-if="!repuestosUtilizados.length" class="py-8 text-center text-muted">Sin consumos en el periodo.</p></div></UCard></section>
+                <UCard>
+                    <template #header>
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <h2 class="font-bold">Órdenes en reparación</h2>
+                                <p class="text-sm text-muted">
+                                    Vista independiente del trabajo actualmente
+                                    en ejecución.
+                                </p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <UBadge color="primary" variant="subtle">{{
+                                    resumen.enReparacion
+                                }}</UBadge>
+                                <UButton
+                                    v-if="puedeExportar"
+                                    label="CSV"
+                                    size="xs"
+                                    color="neutral"
+                                    variant="outline"
+                                    @click="exportar('ordenes_en_reparacion')"
+                                />
+                            </div>
+                        </div>
+                    </template>
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[560px] text-sm">
+                            <thead>
+                                <tr class="border-b border-default text-left">
+                                    <th class="p-2">Orden</th>
+                                    <th class="p-2">Cliente</th>
+                                    <th class="p-2">Placa</th>
+                                    <th class="p-2">Ingreso</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr
+                                    v-for="o in ordenesEnReparacion"
+                                    :key="o.id"
+                                    class="border-b border-default"
+                                >
+                                    <td class="p-2">
+                                        <Link
+                                            :href="route('ordenes.show', o.id)"
+                                            class="font-mono font-bold text-primary"
+                                            >{{ o.numero }}</Link
+                                        >
+                                    </td>
+                                    <td class="p-2">{{ o.cliente }}</td>
+                                    <td class="p-2">{{ o.placa }}</td>
+                                    <td class="p-2">
+                                        {{ fecha(o.recibida_en) }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <p
+                            v-if="!ordenesEnReparacion.length"
+                            class="py-8 text-center text-muted"
+                        >
+                            No hay órdenes en reparación para los filtros
+                            seleccionados.
+                        </p>
+                    </div>
+                </UCard>
 
-      <UCard><template #header><div class="flex items-center justify-between"><div><h2 class="font-bold">Vehículos atendidos por cliente</h2><p class="text-sm text-muted">Frecuencia de atención y cantidad de vehículos.</p></div><UButton v-if="puedeExportar" label="CSV" size="xs" color="neutral" variant="outline" @click="exportar('vehiculos_cliente')"/></div></template><div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3"><div v-for="item in vehiculosPorCliente" :key="item.cliente" class="rounded-xl border border-default bg-elevated/40 p-4"><p class="font-semibold">{{item.cliente}}</p><div class="mt-2 flex gap-2"><UBadge color="primary" variant="subtle">{{item.vehiculos}} vehículos</UBadge><UBadge color="neutral" variant="outline">{{item.visitas}} visitas</UBadge></div></div><p v-if="!vehiculosPorCliente.length" class="py-8 text-center text-muted md:col-span-2 xl:col-span-3">Sin vehículos atendidos en el periodo.</p></div></UCard>
-    </div></template>
-  </UDashboardPanel>
+                <section class="grid gap-6 xl:grid-cols-2">
+                    <UCard
+                        ><template #header
+                            ><div class="flex items-center justify-between">
+                                <h2 class="font-bold">
+                                    Servicios más solicitados
+                                </h2>
+                                <UButton
+                                    v-if="puedeExportar"
+                                    label="CSV"
+                                    size="xs"
+                                    color="neutral"
+                                    variant="outline"
+                                    @click="exportar('servicios')"
+                                /></div
+                        ></template>
+                        <div class="space-y-3">
+                            <div
+                                v-for="s in serviciosSolicitados"
+                                :key="s.nombre"
+                            >
+                                <div
+                                    class="mb-1 flex justify-between gap-3 text-sm"
+                                >
+                                    <span class="font-medium">{{
+                                        s.nombre
+                                    }}</span
+                                    ><span
+                                        >{{ s.solicitudes }} solicitudes ·
+                                        {{ s.completados }} completados</span
+                                    >
+                                </div>
+                                <div class="h-2 rounded-full bg-elevated">
+                                    <div
+                                        class="h-full rounded-full bg-primary"
+                                        :style="{
+                                            width: `${Math.max(3, (Number(s.solicitudes) / maxServicio) * 100)}%`,
+                                        }"
+                                    />
+                                </div>
+                            </div>
+                            <p
+                                v-if="!serviciosSolicitados.length"
+                                class="py-8 text-center text-muted"
+                            >
+                                Sin servicios en el periodo.
+                            </p>
+                        </div></UCard
+                    ><UCard
+                        ><template #header
+                            ><div class="flex items-center justify-between">
+                                <h2 class="font-bold">Repuestos utilizados</h2>
+                                <UButton
+                                    v-if="puedeExportar"
+                                    label="CSV"
+                                    size="xs"
+                                    color="neutral"
+                                    variant="outline"
+                                    @click="exportar('repuestos')"
+                                /></div
+                        ></template>
+                        <div class="overflow-x-auto">
+                            <table class="w-full min-w-[520px] text-sm">
+                                <thead>
+                                    <tr
+                                        class="border-b border-default text-left"
+                                    >
+                                        <th class="p-2">Código</th>
+                                        <th class="p-2">Repuesto</th>
+                                        <th class="p-2 text-right">Cantidad</th>
+                                        <th class="p-2 text-right">Órdenes</th>
+                                        <th
+                                            v-if="capacidades.valores"
+                                            class="p-2 text-right"
+                                        >
+                                            Valor
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr
+                                        v-for="p in repuestosUtilizados"
+                                        :key="p.codigo"
+                                        class="border-b border-default"
+                                    >
+                                        <td class="p-2 font-mono text-primary">
+                                            {{ p.codigo }}
+                                        </td>
+                                        <td class="p-2">{{ p.nombre }}</td>
+                                        <td class="p-2 text-right">
+                                            {{
+                                                Number(
+                                                    p.cantidad,
+                                                ).toLocaleString("es-CO")
+                                            }}
+                                            {{ p.unidad }}
+                                        </td>
+                                        <td class="p-2 text-right">
+                                            {{ p.ordenes }}
+                                        </td>
+                                        <td
+                                            v-if="capacidades.valores"
+                                            class="p-2 text-right"
+                                        >
+                                            $ {{ dinero(p.valor) }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <p
+                                v-if="!repuestosUtilizados.length"
+                                class="py-8 text-center text-muted"
+                            >
+                                Sin consumos en el periodo.
+                            </p>
+                        </div></UCard
+                    >
+                </section>
 
-  <UModal v-model:open="exportaciones" title="Exportar reportes" description="Descarga archivos CSV compatibles con Excel usando los filtros actuales."><template #body><div class="grid gap-3 sm:grid-cols-2"><UButton label="Órdenes activas" icon="i-lucide-download" color="neutral" variant="outline" @click="exportar('ordenes_pendientes')"/><UButton label="Órdenes cerradas" icon="i-lucide-download" color="neutral" variant="outline" @click="exportar('ordenes_finalizadas')"/><UButton v-if="puedeVerIngresos" label="Ingresos" icon="i-lucide-download" color="neutral" variant="outline" @click="exportar('ingresos')"/><UButton label="Servicios" icon="i-lucide-download" color="neutral" variant="outline" @click="exportar('servicios')"/><UButton label="Repuestos" icon="i-lucide-download" color="neutral" variant="outline" @click="exportar('repuestos')"/><UButton label="Vehículos por cliente" icon="i-lucide-download" color="neutral" variant="outline" @click="exportar('vehiculos_cliente')"/></div></template><template #footer><div class="flex w-full justify-end"><UButton label="Cerrar" color="neutral" variant="outline" @click="exportaciones=false"/></div></template></UModal>
+                <UCard v-if="capacidades.clientes"
+                    ><template #header
+                        ><div class="flex items-center justify-between">
+                            <div>
+                                <h2 class="font-bold">
+                                    Vehículos atendidos por cliente
+                                </h2>
+                                <p class="text-sm text-muted">
+                                    Frecuencia de atención y cantidad de
+                                    vehículos.
+                                </p>
+                            </div>
+                            <UButton
+                                v-if="puedeExportar"
+                                label="CSV"
+                                size="xs"
+                                color="neutral"
+                                variant="outline"
+                                @click="exportar('vehiculos_cliente')"
+                            /></div
+                    ></template>
+                    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                        <div
+                            v-for="item in vehiculosPorCliente"
+                            :key="item.cliente"
+                            class="rounded-xl border border-default bg-elevated/40 p-4"
+                        >
+                            <p class="font-semibold">{{ item.cliente }}</p>
+                            <div class="mt-2 flex gap-2">
+                                <UBadge color="primary" variant="subtle"
+                                    >{{ item.vehiculos }} vehículos</UBadge
+                                ><UBadge color="neutral" variant="outline"
+                                    >{{ item.visitas }} visitas</UBadge
+                                >
+                            </div>
+                        </div>
+                        <p
+                            v-if="!vehiculosPorCliente.length"
+                            class="py-8 text-center text-muted md:col-span-2 xl:col-span-3"
+                        >
+                            Sin vehículos atendidos en el periodo.
+                        </p>
+                    </div></UCard
+                >
+            </div></template
+        >
+    </UDashboardPanel>
+
+    <UModal
+        v-model:open="exportaciones"
+        title="Exportar reportes"
+        description="Descarga archivos CSV compatibles con Excel usando los filtros actuales."
+        ><template #body
+            ><div class="grid gap-3 sm:grid-cols-2">
+                <UButton
+                    label="Órdenes activas"
+                    icon="i-lucide-download"
+                    color="neutral"
+                    variant="outline"
+                    @click="exportar('ordenes_pendientes')"
+                /><UButton
+                    label="Órdenes en reparación"
+                    icon="i-lucide-download"
+                    color="neutral"
+                    variant="outline"
+                    @click="exportar('ordenes_en_reparacion')"
+                /><UButton
+                    label="Órdenes cerradas"
+                    icon="i-lucide-download"
+                    color="neutral"
+                    variant="outline"
+                    @click="exportar('ordenes_finalizadas')"
+                /><UButton
+                    v-if="capacidades.ia"
+                    label="Diagnósticos IA"
+                    icon="i-lucide-download"
+                    color="neutral"
+                    variant="outline"
+                    @click="exportar('diagnosticos_ia')"
+                /><UButton
+                    v-if="puedeVerIngresos"
+                    label="Ingresos"
+                    icon="i-lucide-download"
+                    color="neutral"
+                    variant="outline"
+                    @click="exportar('ingresos')"
+                /><UButton
+                    label="Servicios"
+                    icon="i-lucide-download"
+                    color="neutral"
+                    variant="outline"
+                    @click="exportar('servicios')"
+                /><UButton
+                    label="Repuestos"
+                    icon="i-lucide-download"
+                    color="neutral"
+                    variant="outline"
+                    @click="exportar('repuestos')"
+                /><UButton
+                    v-if="capacidades.clientes"
+                    label="Vehículos por cliente"
+                    icon="i-lucide-download"
+                    color="neutral"
+                    variant="outline"
+                    @click="exportar('vehiculos_cliente')"
+                /></div></template
+        ><template #footer
+            ><div class="flex w-full justify-end">
+                <UButton
+                    label="Cerrar"
+                    color="neutral"
+                    variant="outline"
+                    @click="exportaciones = false"
+                /></div></template
+    ></UModal>
 </template>

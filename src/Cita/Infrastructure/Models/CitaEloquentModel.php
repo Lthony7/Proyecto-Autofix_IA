@@ -29,9 +29,11 @@ class CitaEloquentModel extends Model
     public function historial(): HasMany { return $this->hasMany(CitaEstadoHistorialEloquentModel::class, 'cita_id'); }
     public function orden(): HasOne { return $this->hasOne(\Src\OrdenTrabajo\Infrastructure\Models\OrdenTrabajoEloquentModel::class, 'cita_id'); }
     public function repuestosSolicitados(): HasMany { return $this->hasMany(CitaRepuestoSolicitadoEloquentModel::class, 'cita_id'); }
+    public function recordatorios(): HasMany { return $this->hasMany(CitaRecordatorioEntregaEloquentModel::class, 'cita_id'); }
 
     public function scopeVisiblePara(Builder $query, UserEloquentModel $usuario): Builder
     {
+        if ($usuario->hasRole('Administrador')) return $query;
         if ($usuario->hasRole('Cliente')) return $query->whereHas('cliente', fn (Builder $q) => $q->where('usuario_id', $usuario->id));
         if ($usuario->hasRole('Mecánico')) return $query->whereHas('mecanico', fn (Builder $q) => $q->where('usuario_id', $usuario->id)->orWhere(fn (Builder $correo) => $correo->whereNull('usuario_id')->whereRaw('LOWER(email) = ?', [mb_strtolower($usuario->email)])));
         return $query;

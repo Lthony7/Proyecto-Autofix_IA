@@ -24,13 +24,14 @@ Los contextos heredados `Categoria`, `Producto` y `Factura` conservan sus tablas
 
 La aplicación no usa SQLite y no incluye `public` como ruta alternativa. Todas las tablas, incluida `migrations`, se resuelven mediante `DB_SCHEMA`, cuyo valor predeterminado es `modulos`.
 
-El usuario de despliegue debe crear el esquema una sola vez antes de migrar:
+El comando `db:schema:prepare` crea y valida el esquema configurado antes de migrar:
 
-```sql
-CREATE SCHEMA IF NOT EXISTS modulos AUTHORIZATION autofix_app;
+```bash
+php artisan db:schema:prepare
+php artisan migrate
 ```
 
-Configure `.env` a partir de `.env.example`. El usuario de PostgreSQL necesita `USAGE` y `CREATE` sobre `modulos`, pero no necesita crear extensiones.
+Los comandos Artisan cuyo nombre comienza por `migrate` también ejecutan este preflight automáticamente. El proceso rechaza cualquier conexión distinta de PostgreSQL, `public`, identificadores inválidos y rutas de búsqueda que resuelvan más de un esquema. Configure `.env` a partir de `.env.example`; el usuario de despliegue necesita permiso para crear el esquema únicamente cuando infraestructura no lo haya aprovisionado. No se crean extensiones.
 
 ## Instalación
 
@@ -38,12 +39,12 @@ Configure `.env` a partir de `.env.example`. El usuario de PostgreSQL necesita `
 composer install
 npm install
 php artisan config:clear
-php artisan migrate
+composer migrate:safe
 php artisan db:seed
 npm run build
 ```
 
-`RolesPermisosSeeder` es idempotente. Para crear el primer administrador, defina temporalmente `ADMIN_NAME`, `ADMIN_EMAIL` y `ADMIN_PASSWORD` antes de ejecutar el seeder. No existen credenciales predeterminadas y una ejecución posterior no reemplaza la contraseña. Las demás cuentas se crean mediante el flujo administrativo; el registro público está deshabilitado.
+`RolesPermisosSeeder` es idempotente. Para crear el primer administrador, defina temporalmente `ADMIN_NAME`, `ADMIN_EMAIL` y `ADMIN_PASSWORD` antes de ejecutar el seeder. No existen credenciales predeterminadas y una ejecución posterior no reemplaza la contraseña. Las cuentas internas se crean mediante el flujo administrativo; el registro público crea exclusivamente cuentas con rol Cliente.
 
 ## Seguridad
 
@@ -92,7 +93,7 @@ La integración se configura mediante `GROQ_ENABLED`, `GROQ_API_KEY`, `GROQ_API_
 ### Fase 4: citas
 
 - Agenda restringida por rol y propiedad de cliente, vehículo o mecánico asignado.
-- Estados controlados: pendiente, confirmada, reprogramada, atendida y cancelada.
+- Estados controlados: pendiente, confirmada, reprogramada, vencida, atendida y cancelada.
 - Historial inmutable de transiciones, reprogramaciones, usuario y datos anteriores.
 - Duración calculada en el backend desde el servicio seleccionado.
 - Validación de disponibilidad semanal y vigencia del horario del mecánico.
@@ -110,7 +111,7 @@ La integración se configura mediante `GROQ_ENABLED`, `GROQ_API_KEY`, `GROQ_API_
 - La orden reúne la agenda completa, entrada y recomendaciones IA, diagnóstico humano, servicios requeridos, trabajo realizado y repuestos solicitados, sugeridos, requeridos y utilizados.
 - El mecánico prepara el alcance técnico y documenta el trabajo; Recepción o Administración emite la factura definitiva después de finalizar y registra el pago contra esa factura.
 - Asignaciones de mecánicos trazables; las anteriores se retiran sin eliminarse.
-- Estados controlados: pendiente, en diagnóstico, en reparación, finalizada, entregada y cancelada.
+- Estados controlados: pendiente, asignada, en diagnóstico, esperando aprobación, esperando repuestos, en reparación, pausada, en prueba, finalizada, lista para entrega, entregada y cancelada.
 - Historial inmutable de cada transición, usuario, fecha y observaciones.
 - El mecánico solo consulta y modifica órdenes con asignación activa.
 - Diagnósticos técnicos versionados: una revisión nueva conserva las anteriores y marca una sola como vigente.
@@ -303,3 +304,13 @@ Verificación manual:
 3. Agendar una cita desde IA, solicitar opcionalmente un repuesto y verificar que la orden aparezca inmediatamente al mecánico sin factura ni movimiento de inventario.
 4. Abrir la orden y confirmar que muestre la respuesta humana vigente y no una corrección interna obsoleta.
 5. Registrar entradas y salidas de inventario y revisar tarjetas, saldos y visibilidad de la orden asociada según el rol.
+
+### Fase 18: comunicaciones, documentos y accesibilidad
+
+- La recuperación de contraseña usa el broker de Laravel, respuestas contra enumeración de cuentas, enlaces con vencimiento y revocación de sesiones y tokens al completar el cambio.
+- Los recordatorios de citas por correo son configurables, se seleccionan en `America/Bogota` y conservan un registro idempotente por cita, fecha programada y canal.
+- Facturas y comprobantes se generan como PDF en el servidor desde instantáneas financieras y pueden enviarse únicamente al correo congelado en la factura.
+- Los permisos `facturas.enviar` y `pagos.enviar` separan la consulta del envío externo de documentos.
+- Playwright cubre autenticación pública, protección de rutas y un escenario autenticado opcional mediante credenciales de prueba.
+- Los campos compartidos vinculan etiquetas, ayudas y errores; el layout incluye salto al contenido, región principal, foco visible y estado accesible de navegación.
+- WhatsApp y otros proveedores externos no forman parte del alcance actual; las pruebas reales de Groq se ejecutan por separado.

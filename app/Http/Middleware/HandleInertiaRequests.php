@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Inertia\Middleware;
 use Src\OrdenTrabajo\Infrastructure\Models\OrdenTrabajoEloquentModel;
 
@@ -38,6 +39,7 @@ class HandleInertiaRequests extends Middleware
     {
         return [
             ...parent::share($request),
+            'errors' => fn () => $this->validationErrors($request),
             'auth' => fn () => [
                 'user' => $request->user() ? [
                     'id' => $request->user()->id,
@@ -55,7 +57,8 @@ class HandleInertiaRequests extends Middleware
                 'ordenesActivas' => $request->user()?->can('ordenes.ver')
                     ? OrdenTrabajoEloquentModel::query()
                         ->visiblePara($request->user())
-                        ->whereIn('estado', ['pendiente', 'en_diagnostico', 'en_reparacion', 'finalizada'])
+                        ->yaRecibidas()
+                        ->whereIn('estado', ['pendiente', 'asignada', 'en_diagnostico', 'esperando_aprobacion', 'esperando_repuestos', 'en_reparacion', 'pausada', 'en_prueba', 'finalizada', 'lista_entrega'])
                         ->count()
                     : null,
             ],
@@ -64,5 +67,20 @@ class HandleInertiaRequests extends Middleware
                 'location' => $request->url(),
             ],
         ];
+    }
+
+    private function validationErrors(Request $request): array
+    {
+        $bag = $request->session()->get('errors')?->getBag('default');
+        $errors = [];
+        foreach ($bag?->messages() ?? [] as $key => $messages) {
+            $message = $messages[0] ?? null;
+            if (! $message) continue;
+            $errors[$key] = $message;
+            $camel = collect(explode('.', $key))->map(fn (string $part) => ctype_digit($part) ? $part : Str::camel($part))->implode('.');
+            $errors[$camel] = $message;
+        }
+
+        return $errors;
     }
 }

@@ -21,6 +21,7 @@ class ModulesAccessTest extends TestCase
             'inventario.ultimos-movimientos',
             'reportes.filtros',
             'reportes.ordenes-pendientes',
+            'reportes.ordenes-en-reparacion',
             'reportes.ordenes-finalizadas',
             'reportes.ingresos',
             'reportes.servicios',

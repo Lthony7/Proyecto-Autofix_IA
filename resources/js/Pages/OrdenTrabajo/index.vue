@@ -31,7 +31,7 @@ const props = defineProps<{
 
 const filtro = ref(props.estado ?? 'todos')
 const { can } = usePermissions()
-const estados = ['todos', 'pendiente', 'en_diagnostico', 'en_reparacion', 'finalizada', 'entregada', 'cancelada']
+const estados = ['todos', 'pendiente', 'asignada', 'en_diagnostico', 'esperando_aprobacion', 'esperando_repuestos', 'en_reparacion', 'pausada', 'en_prueba', 'finalizada', 'lista_entrega', 'entregada', 'cancelada']
 
 function filtrar() {
   router.get(route('ordenes.index'), { estado: filtro.value === 'todos' ? undefined : filtro.value }, { preserveState: true, replace: true })

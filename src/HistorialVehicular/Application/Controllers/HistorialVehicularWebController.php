@@ -37,6 +37,7 @@ class HistorialVehicularWebController extends Controller
         }
         $buscar = trim((string) $request->input('buscar'));
         $usuario = $request->user();
+        $esCliente = $usuario->hasRole('Cliente');
         $vehiculos = VehiculoEloquentModel::query()
             ->with('cliente:id,razon_social')
             ->visiblePara($usuario)
@@ -77,19 +78,20 @@ class HistorialVehicularWebController extends Controller
     public function show(Request $request, VehiculoEloquentModel $vehiculo): Response
     {
         $usuario = $request->user();
+        $esCliente = $usuario->hasRole('Cliente');
         $modoCliente = $request->route('modo') === 'cliente';
         if ($modoCliente) {
-            abort_unless($usuario->hasRole('Cliente'), 403);
+            abort_unless($esCliente, 403);
         }
         abort_unless(VehiculoEloquentModel::whereKey($vehiculo->id)->visiblePara($usuario)->exists(), 403);
-        if ($usuario->hasRole('Mecánico')) {
+        if ($usuario->can('ordenes.ver_asignadas')) {
             abort_unless(OrdenTrabajoEloquentModel::where('vehiculo_id', $vehiculo->id)->visiblePara($usuario)->exists(), 403);
         }
 
         $filtros = $request->validate([
             'desde' => ['nullable', 'date'],
             'hasta' => ['nullable', 'date', 'after_or_equal:desde'],
-            'estado' => ['nullable', Rule::in(['pendiente', 'en_diagnostico', 'en_reparacion', 'finalizada', 'entregada', 'cancelada'])],
+            'estado' => ['nullable', Rule::in(['pendiente','asignada','en_diagnostico','esperando_aprobacion','esperando_repuestos','en_reparacion','pausada','en_prueba','finalizada','lista_entrega','entregada','cancelada'])],
             'servicio' => ['nullable', 'uuid'],
             'buscar' => ['nullable', 'string', 'max:120'],
             'orden' => ['nullable', Rule::in(['reciente', 'antiguo'])],
@@ -103,17 +105,20 @@ class HistorialVehicularWebController extends Controller
                 'cliente:id,razon_social',
                 'servicios' => fn ($query) => $query->orderBy('created_at'),
                 'asignaciones.mecanico:id,nombres,apellidos',
-                'diagnosticos' => fn ($query) => $query->orderByDesc('version'),
+                'diagnosticos' => fn ($query) => $query->when($esCliente, fn ($diagnostico) => $diagnostico->publicadoActual())->orderByDesc('version'),
             ])
             ->when($filtros['desde'] ?? null, fn (Builder $query, string $desde) => $query->whereDate('recibida_en', '>=', $desde))
             ->when($filtros['hasta'] ?? null, fn (Builder $query, string $hasta) => $query->whereDate('recibida_en', '<=', $hasta))
             ->when($filtros['estado'] ?? null, fn (Builder $query, string $estado) => $query->where('estado', $estado))
             ->when($filtros['servicio'] ?? null, fn (Builder $query, string $servicio) => $query->whereHas('servicios', fn (Builder $linea) => $linea->where('servicio_id', $servicio)))
-            ->when($buscar, fn (Builder $query) => $query->where(function (Builder $sub) use ($buscar) {
+            ->when($buscar, fn (Builder $query) => $query->where(function (Builder $sub) use ($buscar, $esCliente) {
                 $sub->where('numero', 'ilike', "%{$buscar}%")
                     ->orWhere('falla_reportada', 'ilike', "%{$buscar}%")
                     ->orWhereHas('servicios', fn (Builder $servicio) => $servicio->where('nombre_servicio', 'ilike', "%{$buscar}%")->orWhere('observaciones', 'ilike', "%{$buscar}%"))
-                    ->orWhereHas('diagnosticos', fn (Builder $diagnostico) => $diagnostico->where('diagnostico', 'ilike', "%{$buscar}%"));
+                    ->orWhereHas('diagnosticos', function (Builder $diagnostico) use ($buscar, $esCliente) {
+                        if ($esCliente) $diagnostico->publicadoActual()->where('resumen_cliente', 'ilike', "%{$buscar}%");
+                        else $diagnostico->where('diagnostico', 'ilike', "%{$buscar}%");
+                    });
             }))
             ->orderBy('recibida_en', ($filtros['orden'] ?? 'reciente') === 'antiguo' ? 'asc' : 'desc')
             ->paginate(10)
@@ -121,11 +126,11 @@ class HistorialVehicularWebController extends Controller
 
         $ids = $ordenes->getCollection()->pluck('id');
         $puedeVerFinanzas = $usuario->can('historial.finanzas.ver');
-        $camposRepuestos = ['uso.orden_id', 'repuesto.codigo', 'repuesto.nombre', 'uso.cantidad', 'uso.revertido_en'];
+        $camposRepuestos = ['uso.orden_id', 'uso.codigo_snapshot as codigo', 'uso.nombre_snapshot as nombre', 'uso.cantidad', 'uso.fuente_suministro', 'uso.facturable', 'uso.visible_cliente', 'uso.revertido_en'];
         $camposRepuestos[] = $puedeVerFinanzas ? 'uso.precio_unitario' : DB::raw('NULL as precio_unitario');
         $repuestos = DB::table('orden_repuestos as uso')
-            ->join('repuestos as repuesto', 'repuesto.id', '=', 'uso.repuesto_id')
             ->whereIn('uso.orden_id', $ids)
+            ->when($esCliente, fn ($query) => $query->where('uso.visible_cliente', true))
             ->orderBy('uso.created_at')
             ->get($camposRepuestos)
             ->groupBy('orden_id');
@@ -137,13 +142,13 @@ class HistorialVehicularWebController extends Controller
             ? DB::table('facturas_orden')->whereIn('orden_id', $ids)->orderByDesc('emitida_en')->get()->groupBy('orden_id')
             : collect();
 
-        $ordenes->through(function (OrdenTrabajoEloquentModel $orden) use ($repuestos, $pagos, $facturas, $puedeVerFinanzas) {
+        $ordenes->through(function (OrdenTrabajoEloquentModel $orden) use ($repuestos, $pagos, $facturas, $puedeVerFinanzas, $esCliente) {
             $usos = $repuestos->get($orden->id, collect());
             $pagosOrden = $pagos->get($orden->id, collect());
             $facturasOrden = $facturas->get($orden->id, collect());
             $facturaVigente = $facturasOrden->firstWhere('estado', 'emitida');
             $serviciosTotal = $orden->servicios->where('estado', '!=', 'cancelado')->sum(fn ($servicio) => (float) $servicio->precio_acordado);
-            $repuestosTotal = $usos->whereNull('revertido_en')->sum(fn ($uso) => (float) $uso->cantidad * (float) $uso->precio_unitario);
+            $repuestosTotal = $usos->whereNull('revertido_en')->where('facturable', true)->sum(fn ($uso) => (float) $uso->cantidad * (float) $uso->precio_unitario);
             $total = $facturaVigente ? (float) $facturaVigente->total : $serviciosTotal + $repuestosTotal;
             $pagado = $pagosOrden->where('estado', 'registrado')->sum(fn ($pago) => (float) $pago->monto);
             $saldo = max(0, $total - $pagado);
@@ -168,24 +173,28 @@ class HistorialVehicularWebController extends Controller
                     'asignadoEn' => $asignacion->asignado_en,
                     'retiradoEn' => $asignacion->retirado_en,
                 ])->values(),
-                'diagnosticos' => $orden->diagnosticos->map(fn ($diagnostico) => [
+                'diagnosticos' => ($esCliente ? $orden->diagnosticos->where('estado', 'confirmado')->where('vigente', true)->take(1) : $orden->diagnosticos)->map(fn ($diagnostico) => [
                     'version' => $diagnostico->version,
-                    'diagnostico' => $diagnostico->diagnostico,
-                    'pruebas' => $diagnostico->pruebas_realizadas,
+                    'estado' => $diagnostico->estado,
+                    'diagnostico' => $esCliente ? $diagnostico->resumen_cliente : $diagnostico->diagnostico,
+                    'pruebas' => $esCliente ? null : $diagnostico->pruebas_realizadas,
                     'recomendaciones' => $diagnostico->recomendaciones,
                     'vigente' => $diagnostico->vigente,
                     'registradoEn' => $diagnostico->created_at,
                 ])->values(),
-                'servicios' => $orden->servicios->map(fn ($servicio) => [
+                'servicios' => ($esCliente ? $orden->servicios->where('aprobacion_estado', 'aprobado')->where('estado', '<>', 'cancelado') : $orden->servicios)->map(fn ($servicio) => [
                     'nombre' => $servicio->nombre_servicio,
                     'precio' => $puedeVerFinanzas ? $servicio->precio_acordado : null,
                     'estado' => $servicio->estado,
-                    'observaciones' => $servicio->observaciones,
+                    'observaciones' => $esCliente ? null : $servicio->observaciones,
+                    'trabajoRealizado' => $servicio->trabajo_realizado,
+                    'recomendacionesCliente' => $servicio->recomendaciones_cliente,
                 ])->values(),
                 'repuestos' => $usos->map(fn ($uso) => [
                     'codigo' => $uso->codigo,
                     'nombre' => $uso->nombre,
                     'cantidad' => $uso->cantidad,
+                    'fuente' => $uso->fuente_suministro,
                     'precio' => $puedeVerFinanzas ? $uso->precio_unitario : null,
                     'revertido' => $uso->revertido_en !== null,
                 ])->values(),

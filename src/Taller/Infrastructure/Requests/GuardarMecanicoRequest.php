@@ -6,6 +6,7 @@ use App\Rules\DocumentoColombiano;
 use App\Rules\TelefonoColombiano;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Src\Auth\Infrastructure\Models\UserEloquentModel;
 
 class GuardarMecanicoRequest extends FormRequest
 {
@@ -48,6 +49,16 @@ class GuardarMecanicoRequest extends FormRequest
             'horarios.*.horaInicio' => ['required', 'date_format:H:i'],
             'horarios.*.horaFin' => ['required', 'date_format:H:i', 'after:horarios.*.horaInicio'],
         ];
+    }
+
+    public function after(): array
+    {
+        return [function ($validator): void {
+            $usuarioId = $this->input('usuario_id');
+            if ($usuarioId && ! UserEloquentModel::whereKey($usuarioId)->where('activo', true)->role('Mecánico')->exists()) {
+                $validator->errors()->add('usuarioId', 'La cuenta vinculada debe estar activa y tener el rol Mecánico.');
+            }
+        }];
     }
 
     public function messages(): array

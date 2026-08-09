@@ -15,7 +15,7 @@ class EmitirFacturaOrdenRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'tasa_impuesto' => $this->input('tasaImpuesto', 0),
+            'tasa_impuesto' => (string) config('autofix.tax_rate', '0.00'),
             'vence_en' => $this->input('venceEn') ?: null,
             'motivo_descuento' => $this->input('motivoDescuento') ?: null,
         ]);

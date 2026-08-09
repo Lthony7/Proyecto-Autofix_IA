@@ -15,8 +15,8 @@ class ValidarPreparacionTrabajo
             throw ValidationException::withMessages(['diagnostico' => 'El diagnóstico IA vinculado debe ser confirmado o corregido por un mecánico antes de continuar.']);
         }
 
-        if (! DiagnosticoTecnicoEloquentModel::where('orden_id', $ordenId)->where('vigente', true)->exists()) {
-            throw ValidationException::withMessages(['diagnostico' => 'Registra el diagnóstico técnico humano antes de iniciar reparaciones, completar servicios o consumir repuestos.']);
+        if (! DiagnosticoTecnicoEloquentModel::where('orden_id', $ordenId)->publicadoActual()->exists()) {
+            throw ValidationException::withMessages(['diagnostico' => 'Confirma el diagnóstico técnico humano antes de iniciar reparaciones, completar servicios o consumir repuestos.']);
         }
     }
 }

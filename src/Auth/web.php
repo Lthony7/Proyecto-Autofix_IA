@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Src\Auth\Application\Controllers\PasswordResetController;
 use Src\Auth\Application\Controllers\WebAuthController;
 use Src\Auth\Application\Controllers\UserWebController;
 
@@ -15,6 +16,17 @@ Route::middleware('guest')->group(function () {
     Route::get('/register', [WebAuthController::class, 'showRegistrationForm'])->name('register');
     Route::post('/register', [WebAuthController::class, 'register'])
         ->middleware('throttle:3,1');
+
+    Route::get('/forgot-password', [PasswordResetController::class, 'create'])
+        ->name('password.request');
+    Route::post('/forgot-password', [PasswordResetController::class, 'store'])
+        ->middleware('throttle:5,1')
+        ->name('password.email');
+    Route::get('/reset-password/{token}', [PasswordResetController::class, 'edit'])
+        ->name('password.reset');
+    Route::post('/reset-password', [PasswordResetController::class, 'update'])
+        ->middleware('throttle:5,1')
+        ->name('password.update');
 });
 
 Route::middleware('auth')->group(function () {

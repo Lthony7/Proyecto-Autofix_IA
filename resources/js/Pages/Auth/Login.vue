@@ -20,6 +20,7 @@ const state = reactive({
 // Obtener errores de validación del backend
 const page = usePage()
 const backendErrors = computed(() => page.props.errors || {})
+const status = computed(() => (page.props.flash as { success?: string })?.success)
 
 // Convertir errores de array a string (Laravel retorna arrays)
 const errors = computed(() => {
@@ -48,7 +49,7 @@ const handleSubmit = () => {
 
 <template>
   <Head title="Iniciar sesión" />
-  <div class="min-h-screen flex items-center justify-center bg-background p-4">
+  <main class="min-h-screen flex items-center justify-center bg-background p-4">
     <div class="w-full max-w-md">
       <UCard>
         <template #header>
@@ -61,33 +62,42 @@ const handleSubmit = () => {
           </div>
         </template>
 
+        <UAlert v-if="status" class="mb-4" color="success" variant="subtle" icon="i-lucide-circle-check" :description="status" role="status" />
+
         <form @submit.prevent="handleSubmit" class="space-y-4">
           <FormField label="Correo electrónico" name="email" required :error="errors.email">
-            <UInput
-              v-model="state.email"
-              type="email"
-              autocomplete="email"
-              placeholder="tu@email.com"
-              icon="i-lucide-mail"
-              size="xl"
-              class="w-full"
-            />
+            <template #default="{ fieldAttrs }">
+              <UInput
+                v-bind="fieldAttrs"
+                v-model="state.email"
+                type="email"
+                autocomplete="email"
+                placeholder="tu@email.com"
+                icon="i-lucide-mail"
+                size="xl"
+                class="w-full"
+              />
+            </template>
           </FormField>
 
           <FormField label="Contraseña" name="password" required :error="errors.password">
-            <UInput
-              v-model="state.password"
-              type="password"
-              autocomplete="current-password"
-              placeholder="••••••••"
-              icon="i-lucide-lock"
-              size="xl"
-              class="w-full"
-            />
+            <template #default="{ fieldAttrs }">
+              <UInput
+                v-bind="fieldAttrs"
+                v-model="state.password"
+                type="password"
+                autocomplete="current-password"
+                placeholder="••••••••"
+                icon="i-lucide-lock"
+                size="xl"
+                class="w-full"
+              />
+            </template>
           </FormField>
 
-          <div class="flex items-center">
+          <div class="flex items-center justify-between gap-3">
             <UCheckbox v-model="state.remember" label="Recordarme" />
+            <UButton :to="route('password.request')" variant="link" color="primary" label="¿Olvidaste tu contraseña?" :padded="false" />
           </div>
 
           <UButton
@@ -108,5 +118,5 @@ const handleSubmit = () => {
         </template>
       </UCard>
     </div>
-  </div>
+  </main>
 </template>

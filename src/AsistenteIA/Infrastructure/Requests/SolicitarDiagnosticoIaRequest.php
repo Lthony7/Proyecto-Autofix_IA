@@ -35,19 +35,19 @@ class SolicitarDiagnosticoIaRequest extends FormRequest
             'vehiculo_id' => ['required', 'uuid', Rule::exists('vehiculos', 'id')->where('estado', 'activo')],
             'kilometraje' => ['required', 'integer', 'min:0', 'max:9999999'],
             'categoria_falla' => ['required', Rule::in(['frenos', 'motor', 'electrico', 'suspension', 'transmision', 'climatizacion', 'otro'])],
-            'sintoma_principal' => ['required', 'string'],
-            'momento_ocurre' => ['required', 'string'],
+            'sintoma_principal' => ['required', 'string', 'max:3000'],
+            'momento_ocurre' => ['required', 'string', 'max:1000'],
             'frecuencia' => ['required', Rule::in(['primera_vez', 'ocasional', 'intermitente', 'frecuente', 'permanente'])],
-            'tiempo_desde_inicio' => ['required', 'string'],
+            'tiempo_desde_inicio' => ['required', 'string', 'max:500'],
             'intensidad' => ['required', Rule::in(['leve', 'moderada', 'severa'])],
             'condiciones' => ['array', 'max:8'],
             'condiciones.*' => [Rule::in(['frio', 'caliente', 'detenido', 'movimiento', 'acelerar', 'frenar', 'girar', 'subida', 'carretera', 'ciudad', 'lluvia'])],
-            'senales' => ['nullable', 'string'], 'luces_tablero' => ['nullable', 'string'],
-            'perdida_potencia_arranque' => ['nullable', 'string'], 'codigos_obd' => ['nullable', 'string', 'max:500'],
-            'pruebas_realizadas' => ['nullable', 'string'],
+            'senales' => ['nullable', 'string', 'max:1500'], 'luces_tablero' => ['nullable', 'string', 'max:1000'],
+            'perdida_potencia_arranque' => ['nullable', 'string', 'max:1000'], 'codigos_obd' => ['nullable', 'string', 'max:500'],
+            'pruebas_realizadas' => ['nullable', 'string', 'max:2000'],
             'puede_circular' => ['required', Rule::in(['si', 'con_dificultad', 'no'])],
             'urgencia_percibida' => ['required', Rule::in(['baja', 'media', 'alta', 'critica'])],
-            'reparaciones_recientes' => ['nullable', 'string'], 'observaciones' => ['nullable', 'string'],
+            'reparaciones_recientes' => ['nullable', 'string', 'max:2000'], 'observaciones' => ['nullable', 'string', 'max:2000'],
         ];
     }
 
@@ -62,7 +62,7 @@ class SolicitarDiagnosticoIaRequest extends FormRequest
                 $validator->errors()->add('kilometraje', "El kilometraje no puede ser menor al último registrado ({$vehiculo->kilometraje} km).");
             }
             if ($vehiculo && $this->user()?->hasRole('Mecánico')) {
-                $autorizado = $vehiculo->ordenes()->whereIn('estado', ['pendiente', 'en_diagnostico', 'en_reparacion'])->whereHas('asignaciones', fn ($q) => $q->where('activo', true)->whereHas('mecanico', fn ($m) => $m->where('usuario_id', $this->user()->id)))->exists()
+                $autorizado = $vehiculo->ordenes()->whereIn('estado', ['pendiente','asignada','en_diagnostico','esperando_aprobacion','esperando_repuestos','en_reparacion','pausada','en_prueba'])->whereHas('asignaciones', fn ($q) => $q->where('activo', true)->whereHas('mecanico', fn ($m) => $m->where('usuario_id', $this->user()->id)))->exists()
                     || \Src\Cita\Infrastructure\Models\CitaEloquentModel::where('vehiculo_id', $vehiculo->id)->whereIn('estado', ['pendiente', 'confirmada', 'reprogramada'])->where('fin', '>=', now())->whereHas('mecanico', fn ($m) => $m->where('usuario_id', $this->user()->id))->exists();
                 if (! $autorizado) $validator->errors()->add('vehiculoId', 'Solo puedes generar diagnósticos para vehículos asignados a tu trabajo.');
             }

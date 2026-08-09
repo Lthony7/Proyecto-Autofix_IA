@@ -63,7 +63,7 @@ class AsistenteIaWebController extends Controller
             $q->where('estado', 'activo');
             if ($request->user()->hasRole('Mecánico')) {
                 $q->where(fn ($alcance) => $alcance
-                    ->whereHas('ordenes', fn ($o) => $o->whereIn('estado', ['pendiente', 'en_diagnostico', 'en_reparacion'])->whereHas('asignaciones', fn ($a) => $a->where('activo', true)->whereHas('mecanico', fn ($m) => $m->where('usuario_id', $request->user()->id))))
+                    ->whereHas('ordenes', fn ($o) => $o->whereIn('estado', ['pendiente','asignada','en_diagnostico','esperando_aprobacion','esperando_repuestos','en_reparacion','pausada','en_prueba'])->whereHas('asignaciones', fn ($a) => $a->where('activo', true)->whereHas('mecanico', fn ($m) => $m->where('usuario_id', $request->user()->id))))
                     ->orWhereHas('citas', fn ($c) => $c->whereIn('estado', ['pendiente', 'confirmada', 'reprogramada'])->where('fin', '>=', now())->whereHas('mecanico', fn ($m) => $m->where('usuario_id', $request->user()->id))));
             }
         };
@@ -204,7 +204,7 @@ class AsistenteIaWebController extends Controller
     {
         $historial = OrdenTrabajoEloquentModel::where('vehiculo_id', $vehiculo->id)
             ->visiblePara($usuario)
-            ->with(['servicios:id,orden_id,nombre_servicio,estado', 'diagnosticos' => fn ($q) => $q->where('vigente', true)->select('id', 'orden_id', 'diagnostico', 'recomendaciones', 'created_at')])
+            ->with(['servicios:id,orden_id,nombre_servicio,estado', 'diagnosticos' => fn ($q) => $q->publicadoActual()->select('id', 'orden_id', 'diagnostico', 'recomendaciones', 'created_at')])
             ->latest('recibida_en')->limit(5)->get(['id', 'numero', 'estado', 'falla_reportada', 'kilometraje', 'recibida_en'])
             ->map(fn ($orden) => ['numero' => $orden->numero, 'fecha' => $orden->recibida_en?->toDateString(), 'estado' => $orden->estado, 'falla' => $orden->falla_reportada, 'kilometraje' => $orden->kilometraje, 'servicios' => $orden->servicios->pluck('nombre_servicio'), 'diagnostico_confirmado' => $orden->diagnosticos->first()?->diagnostico]);
 

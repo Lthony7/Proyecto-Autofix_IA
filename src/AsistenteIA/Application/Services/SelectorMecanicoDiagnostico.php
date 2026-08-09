@@ -17,7 +17,7 @@ class SelectorMecanicoDiagnostico
             ->whereHas('especialidades', fn ($q) => $q->whereKey($especialidad->id)->where('mecanico_especialidad.activo', true))
             ->with(['especialidades' => fn ($q) => $q->where('mecanico_especialidad.activo', true)])
             ->withCount([
-                'asignaciones as ordenes_activas' => fn ($q) => $q->where('activo', true)->whereHas('orden', fn ($o) => $o->whereIn('estado', ['pendiente', 'en_diagnostico', 'en_reparacion', 'finalizada'])),
+                'asignaciones as ordenes_activas' => fn ($q) => $q->where('activo', true)->whereHas('orden', fn ($o) => $o->whereIn('estado', ['pendiente','asignada','en_diagnostico','esperando_aprobacion','esperando_repuestos','en_reparacion','pausada','en_prueba'])),
                 'citas as citas_futuras' => fn ($q) => $q->where('inicio', '>=', now())->whereNotIn('estado', ['cancelada', 'atendida']),
                 'disponibilidades as horarios_activos' => fn ($q) => $q->where('activo', true),
             ])

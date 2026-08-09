@@ -145,8 +145,26 @@ body {
 }
 
 *:focus-visible {
-  outline-color: var(--ui-primary);
+  outline: 2px solid var(--ui-primary);
   outline-offset: 2px;
+}
+
+.skip-link {
+  position: fixed;
+  top: .75rem;
+  left: .75rem;
+  z-index: 100;
+  padding: .65rem 1rem;
+  border-radius: .5rem;
+  background: var(--ui-bg);
+  color: var(--ui-text-highlighted);
+  font-weight: 700;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 20%);
+  transform: translateY(calc(-100% - 1rem));
+}
+
+.skip-link:focus {
+  transform: translateY(0);
 }
 
 /* Shared visual language for every authenticated module. */

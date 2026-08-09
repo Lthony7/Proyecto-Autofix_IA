@@ -1,4 +1,6 @@
-# Documentación API REST - Laravel
+# Documentación API REST Histórica
+
+> **Aviso:** este documento describe el prototipo API original y se conserva como referencia histórica. La aplicación AUTOFIX IA actual usa sesiones web, Inertia y las rutas `web.php`; los endpoints API descritos aquí no están cargados. Consulte `README.md` y `AUTOFIX_IMPLEMENTATION.md` para la documentación vigente.
 
 ## Tabla de Contenidos
 1. [Arquitectura](#arquitectura)

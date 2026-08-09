@@ -2,20 +2,18 @@
 
 namespace Src\Pago\Application\Services;
 
+use Brick\Math\BigDecimal;
 use Carbon\CarbonImmutable;
 
 class EstadoFinanciero
 {
-    public function determinar(float $pagado, float $saldo, string|null $venceEn = null): string
+    public function determinar(string|int|float $pagado, string|int|float $saldo, ?string $venceEn = null): string
     {
-        if ($saldo <= 0.00001) {
-            return 'pagado';
-        }
+        $pagado = BigDecimal::of((string) $pagado);
+        $saldo = BigDecimal::of((string) $saldo);
+        if ($saldo->isLessThanOrEqualTo(0)) return 'pagado';
+        if ($venceEn && CarbonImmutable::parse($venceEn)->endOfDay()->isPast()) return 'vencido';
 
-        if ($venceEn && CarbonImmutable::parse($venceEn)->endOfDay()->isPast()) {
-            return 'vencido';
-        }
-
-        return $pagado <= 0.00001 ? 'pendiente' : 'parcial';
+        return $pagado->isLessThanOrEqualTo(0) ? 'pendiente' : 'parcial';
     }
 }

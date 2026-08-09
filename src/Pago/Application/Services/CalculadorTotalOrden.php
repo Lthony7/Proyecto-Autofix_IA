@@ -15,7 +15,7 @@ class CalculadorTotalOrden
         $servicios = BigDecimal::of((string) DB::table('orden_servicios')
             ->where('orden_id', $ordenId)->where('estado', '<>', 'cancelado')->sum('precio_acordado'));
         $repuestos = BigDecimal::zero();
-        foreach (DB::table('orden_repuestos')->where('orden_id', $ordenId)->whereNull('revertido_en')->get(['cantidad', 'precio_unitario']) as $repuesto) {
+        foreach (DB::table('orden_repuestos')->where('orden_id', $ordenId)->whereNull('revertido_en')->where('facturable', true)->get(['cantidad', 'precio_unitario']) as $repuesto) {
             $repuestos = $repuestos->plus(BigDecimal::of((string) $repuesto->cantidad)->multipliedBy(BigDecimal::of((string) $repuesto->precio_unitario)));
         }
 
@@ -26,7 +26,7 @@ class CalculadorTotalOrden
         $total = $factura ? BigDecimal::of((string) $factura->total) : $servicios->plus($repuestos);
         $saldo = $total->minus($pagado)->toScale(2, RoundingMode::HALF_UP);
         $pagado = $pagado->toScale(2, RoundingMode::HALF_UP);
-        $estado = $this->estadoFinanciero->determinar((float) (string) $pagado, (float) (string) $saldo, $factura?->vence_en);
+        $estado = $this->estadoFinanciero->determinar((string) $pagado, (string) $saldo, $factura?->vence_en);
 
         return [
             'servicios' => (string) $servicios,

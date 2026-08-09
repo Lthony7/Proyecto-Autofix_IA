@@ -1,6 +1,6 @@
 <?php
 namespace Src\Pago\Application\Controllers;
-use App\Http\Controllers\Controller;use Illuminate\Http\RedirectResponse;use Illuminate\Http\Request;use Illuminate\Support\Facades\DB;use Inertia\Inertia;use Inertia\Response;use Src\Auditoria\Application\Services\RegistrarAuditoria;use Src\Facturacion\Infrastructure\Models\FacturaOrdenEloquentModel;use Src\OrdenTrabajo\Infrastructure\Models\OrdenTrabajoEloquentModel;use Src\Pago\Application\Services\CalculadorTotalOrden;use Src\Pago\Application\Services\GestionarPago;use Src\Pago\Infrastructure\Models\PagoEloquentModel;use Src\Pago\Infrastructure\Requests\AnularPagoRequest;use Src\Pago\Infrastructure\Requests\ReembolsarPagoRequest;use Src\Pago\Infrastructure\Requests\RegistrarPagoRequest;
+use App\Http\Controllers\Controller;use Illuminate\Http\RedirectResponse;use Illuminate\Http\Request;use Illuminate\Http\Response as HttpResponse;use Illuminate\Support\Facades\DB;use Illuminate\Validation\ValidationException;use Inertia\Inertia;use Inertia\Response;use Src\Auditoria\Application\Services\RegistrarAuditoria;use Src\Facturacion\Infrastructure\Models\FacturaOrdenEloquentModel;use Src\OrdenTrabajo\Infrastructure\Models\OrdenTrabajoEloquentModel;use Src\Pago\Application\Jobs\EnviarComprobantePagoPorCorreo;use Src\Pago\Application\Services\CalculadorTotalOrden;use Src\Pago\Application\Services\GenerarComprobantePagoPdf;use Src\Pago\Application\Services\GestionarPago;use Src\Pago\Infrastructure\Models\PagoEloquentModel;use Src\Pago\Infrastructure\Requests\AnularPagoRequest;use Src\Pago\Infrastructure\Requests\ReembolsarPagoRequest;use Src\Pago\Infrastructure\Requests\RegistrarPagoRequest;
 class PagoWebController extends Controller
 {
     public function index(Request $r, CalculadorTotalOrden $calculador): Response
@@ -25,6 +25,7 @@ class PagoWebController extends Controller
                 ->visiblePara($r->user())
                 ->with(['cliente:id,razon_social', 'vehiculo:id,placa,marca,modelo'])
                 ->whereNot('estado', 'cancelada')
+                ->whereExists(fn ($q) => $q->selectRaw('1')->from('facturas_orden as factura_cobrable')->whereColumn('factura_cobrable.orden_id', 'ordenes_trabajo.id')->where('factura_cobrable.estado', 'emitida'))
                 ->latest('recibida_en')
                 ->limit(100)
                 ->get()
@@ -53,9 +54,9 @@ class PagoWebController extends Controller
     }
     public function comprobante(Request $r, PagoEloquentModel $pago, CalculadorTotalOrden $calculador, RegistrarAuditoria $auditoria): Response
     {
-        $pago->load(['orden.cliente', 'orden.vehiculo']);
+        $pago->load(['orden.cliente', 'orden.vehiculo', 'factura.lineas']);
         $this->autorizarOrden($r, $pago->orden);
-        $factura = FacturaOrdenEloquentModel::with('lineas')->where('orden_id', $pago->orden_id)->where('estado', 'emitida')->first();
+        $factura = $pago->factura ?: FacturaOrdenEloquentModel::with('lineas')->where('orden_id', $pago->orden_id)->where('estado', 'emitida')->first();
         $conceptos = $pago->detalle_snapshot !== null ? collect($pago->detalle_snapshot) : ($factura?->lineas?->map(fn ($linea) => [
             'tipo' => $linea->tipo,
             'codigo' => $linea->codigo,
@@ -92,11 +93,48 @@ class PagoWebController extends Controller
             'conceptos' => $conceptos->values(),
             'finanzas' => $finanzas,
             'factura' => $factura ? ['numero' => $factura->numero, 'descuento' => $factura->descuento, 'impuesto' => $factura->impuesto, 'total' => $factura->total] : null,
-            'reconstruido' => $pago->detalle_snapshot === null,
+            'identidad' => [
+                'clienteNombre' => $pago->cliente_nombre_snapshot ?: $pago->orden->cliente?->razon_social,
+                'clienteDocumento' => trim(($pago->cliente_tipo_documento_snapshot ?: $pago->orden->cliente?->tipo_documento).' '.($pago->cliente_documento_snapshot ?: $pago->orden->cliente?->numero_documento)),
+                'ordenNumero' => $pago->orden_numero_snapshot ?: $pago->orden->numero,
+                'vehiculoPlaca' => $pago->vehiculo_placa_snapshot ?: $pago->orden->vehiculo?->placa,
+                'vehiculoDescripcion' => $pago->vehiculo_descripcion_snapshot ?: trim("{$pago->orden->vehiculo?->marca} {$pago->orden->vehiculo?->modelo}"),
+                'facturaNumero' => $pago->factura_numero_snapshot ?: $factura?->numero,
+            ],
+            'reconstruido' => $pago->detalle_snapshot === null || $pago->factura_id === null,
         ]);
     }
-    public function store(RegistrarPagoRequest$r,OrdenTrabajoEloquentModel$orden,GestionarPago$servicio,RegistrarAuditoria$a):RedirectResponse{$this->autorizarOrden($r,$orden);$pago=$servicio->registrar($orden,$r->validated(),$r->user()->id);$a->registrar('pago.registrado','pago',$pago->id,['orden_id'=>$orden->id,'monto'=>$pago->monto],$r);if($r->boolean('ver_comprobante'))return redirect()->route('pagos.comprobante',$pago)->with('success',"Pago {$pago->numero} registrado y comprobante generado.");return back()->with('success',"Pago {$pago->numero} registrado.");}
-    public function anular(AnularPagoRequest$r,PagoEloquentModel$pago,GestionarPago$servicio,RegistrarAuditoria$a):RedirectResponse{$orden=OrdenTrabajoEloquentModel::findOrFail($pago->orden_id);$this->autorizarOrden($r,$orden);$servicio->anular($pago,$r->validated('motivo'),$r->user()->id);$a->registrar('pago.anulado','pago',$pago->id,['motivo'=>$r->validated('motivo')],$r);return back()->with('success','Pago anulado; el saldo de la orden fue restablecido.');}
-    public function reembolsar(ReembolsarPagoRequest$r,PagoEloquentModel$pago,GestionarPago$servicio,RegistrarAuditoria$a):RedirectResponse{$orden=OrdenTrabajoEloquentModel::findOrFail($pago->orden_id);$this->autorizarOrden($r,$orden);$servicio->reembolsar($pago,$r->validated('motivo'),$r->user()->id);$a->registrar('pago.reembolsado','pago',$pago->id,['motivo'=>$r->validated('motivo'),'monto'=>$pago->monto],$r);return back()->with('success','Pago reembolsado; el saldo de la orden fue restablecido.');}
+    public function pdf(Request $r, PagoEloquentModel $pago, GenerarComprobantePagoPdf $generador): HttpResponse
+    {
+        $orden = OrdenTrabajoEloquentModel::findOrFail($pago->orden_id);
+        $this->autorizarOrden($r, $orden);
+        $pdf = $generador->generar($pago);
+        $nombre = 'comprobante-'.preg_replace('/[^A-Za-z0-9._-]/', '-', $pago->comprobante_numero).'.pdf';
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => ($r->boolean('download') ? 'attachment' : 'inline').'; filename="'.$nombre.'"',
+            'Content-Length' => (string) strlen($pdf),
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+    public function enviar(Request $r, PagoEloquentModel $pago, GenerarComprobantePagoPdf $generador, RegistrarAuditoria $auditoria): RedirectResponse
+    {
+        $orden = OrdenTrabajoEloquentModel::findOrFail($pago->orden_id);
+        $this->autorizarOrden($r, $orden);
+        $generador->datos($pago);
+        $factura = FacturaOrdenEloquentModel::find($pago->factura_id);
+        if (! $factura || filter_var($factura->cliente_email, FILTER_VALIDATE_EMAIL) === false) {
+            throw ValidationException::withMessages(['email' => 'La factura asociada no tiene un correo de cliente válido en su instantánea.']);
+        }
+
+        EnviarComprobantePagoPorCorreo::dispatch($pago->id, $r->user()->id)->afterCommit();
+        $auditoria->registrar('pago.comprobante_correo_encolado', 'pago', $pago->id, ['destinatario' => $factura->cliente_email], $r);
+
+        return back()->with('success', "El comprobante se enviará a {$factura->cliente_email}.");
+    }
+    public function store(RegistrarPagoRequest$r,OrdenTrabajoEloquentModel$orden,GestionarPago$servicio,RegistrarAuditoria$a):RedirectResponse{$this->autorizarOrden($r,$orden);$pago=DB::transaction(function()use($r,$orden,$servicio,$a){$pago=$servicio->registrar($orden,$r->validated(),$r->user()->id);if($pago->wasRecentlyCreated)$a->registrar('pago.registrado','pago',$pago->id,['orden_id'=>$orden->id,'monto'=>$pago->monto],$r);return$pago;});$mensaje=$pago->wasRecentlyCreated?"Pago {$pago->numero} registrado.":"El pago {$pago->numero} ya estaba registrado; no se duplicó.";if($r->boolean('ver_comprobante'))return redirect()->route('pagos.comprobante',$pago)->with('success',$mensaje);return back()->with('success',$mensaje);}
+    public function anular(AnularPagoRequest$r,PagoEloquentModel$pago,GestionarPago$servicio,RegistrarAuditoria$a):RedirectResponse{$orden=OrdenTrabajoEloquentModel::findOrFail($pago->orden_id);$this->autorizarOrden($r,$orden);DB::transaction(function()use($r,$pago,$servicio,$a){$servicio->anular($pago,$r->validated('motivo'),$r->user()->id);$a->registrar('pago.anulado','pago',$pago->id,['motivo'=>$r->validated('motivo')],$r);});return back()->with('success','Pago anulado; el saldo de la orden fue restablecido.');}
+    public function reembolsar(ReembolsarPagoRequest$r,PagoEloquentModel$pago,GestionarPago$servicio,RegistrarAuditoria$a):RedirectResponse{$orden=OrdenTrabajoEloquentModel::findOrFail($pago->orden_id);$this->autorizarOrden($r,$orden);DB::transaction(function()use($r,$pago,$servicio,$a){$servicio->reembolsar($pago,$r->validated('motivo'),$r->user()->id);$a->registrar('pago.reembolsado','pago',$pago->id,['motivo'=>$r->validated('motivo'),'monto'=>$pago->monto],$r);});return back()->with('success','Pago reembolsado; el saldo de la orden fue restablecido.');}
     private function autorizarOrden(Request$r,OrdenTrabajoEloquentModel$o):void{abort_unless(OrdenTrabajoEloquentModel::whereKey($o->id)->visiblePara($r->user())->exists(),403);}
 }
