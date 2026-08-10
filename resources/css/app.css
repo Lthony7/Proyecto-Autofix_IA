@@ -208,6 +208,10 @@ body {
   overflow-y: auto;
 }
 
+.app-content > [data-slot='root']:has(> [data-slot='body']) > [data-slot='body'] > * {
+  flex-shrink: 0;
+}
+
 .app-content [data-slot='root']:has(> [data-slot='header']):has(> [data-slot='body']):hover {
   border-color: color-mix(in srgb, var(--ui-primary) 25%, var(--ui-border));
   box-shadow: 0 16px 42px -30px color-mix(in srgb, var(--ui-primary) 70%, black);
