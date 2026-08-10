@@ -35,6 +35,8 @@ const errors = computed<Record<string, string>>(
     () => page.props.errors as Record<string, string>,
 );
 const procesando = ref(false);
+const mostrarFormularioEspecialidad = ref(false);
+const mostrarFormularioServicio = ref(false);
 const especialidad = reactive({ codigo: "", nombre: "", descripcion: "" });
 const servicio = reactive({
     codigo: "",
@@ -60,12 +62,14 @@ function guardarEspecialidad() {
     procesando.value = true;
     router.post(route("especialidades.store"), especialidad, {
         preserveScroll: true,
-        onSuccess: () =>
+        onSuccess: () => {
             Object.assign(especialidad, {
                 codigo: "",
                 nombre: "",
                 descripcion: "",
-            }),
+            });
+            mostrarFormularioEspecialidad.value = false;
+        },
         onFinish: () => {
             procesando.value = false;
         },
@@ -75,7 +79,7 @@ function guardarServicio() {
     procesando.value = true;
     router.post(route("servicios.store"), servicio, {
         preserveScroll: true,
-        onSuccess: () =>
+        onSuccess: () => {
             Object.assign(servicio, {
                 codigo: "",
                 nombre: "",
@@ -83,7 +87,9 @@ function guardarServicio() {
                 especialidadId: "",
                 duracionMinutos: 60,
                 precioBase: "0.00",
-            }),
+            });
+            mostrarFormularioServicio.value = false;
+        },
         onFinish: () => {
             procesando.value = false;
         },
@@ -122,7 +128,35 @@ function toggle(
                     v-if="vista === 'resumen' || vista === 'especialidades'"
                     class="w-full space-y-4"
                 >
-                    <UCard v-if="can('especialidades.gestionar')">
+                    <div
+                        v-if="can('especialidades.gestionar')"
+                        class="flex justify-end"
+                    >
+                        <UButton
+                            label="Crear nueva especialidad"
+                            icon="i-lucide-plus"
+                            :color="
+                                mostrarFormularioEspecialidad
+                                    ? 'neutral'
+                                    : 'primary'
+                            "
+                            :variant="
+                                mostrarFormularioEspecialidad
+                                    ? 'ghost'
+                                    : 'solid'
+                            "
+                            @click="
+                                mostrarFormularioEspecialidad =
+                                    !mostrarFormularioEspecialidad
+                            "
+                        />
+                    </div>
+                    <UCard
+                        v-if="
+                            can('especialidades.gestionar') &&
+                            mostrarFormularioEspecialidad
+                        "
+                    >
                         <template #header
                             ><h2 class="font-semibold">
                                 Nueva especialidad
@@ -236,7 +270,33 @@ function toggle(
                     v-if="vista === 'resumen' || vista === 'servicios'"
                     class="w-full space-y-4"
                 >
-                    <UCard v-if="can('servicios.gestionar')">
+                    <div
+                        v-if="can('servicios.gestionar')"
+                        class="flex justify-end"
+                    >
+                        <UButton
+                            label="Crear nuevo servicio"
+                            icon="i-lucide-plus"
+                            :color="
+                                mostrarFormularioServicio
+                                    ? 'neutral'
+                                    : 'primary'
+                            "
+                            :variant="
+                                mostrarFormularioServicio ? 'ghost' : 'solid'
+                            "
+                            @click="
+                                mostrarFormularioServicio =
+                                    !mostrarFormularioServicio
+                            "
+                        />
+                    </div>
+                    <UCard
+                        v-if="
+                            can('servicios.gestionar') &&
+                            mostrarFormularioServicio
+                        "
+                    >
                         <template #header
                             ><h2 class="font-semibold">
                                 Nuevo servicio
