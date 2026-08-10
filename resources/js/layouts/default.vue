@@ -727,7 +727,7 @@ const groups = computed(() => [
 
             <UDashboardSearch :groups="groups" />
 
-            <div class="relative flex min-w-0 flex-1 overflow-hidden">
+            <div class="relative flex min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
                 <div
                     class="pointer-events-none fixed inset-y-0 right-0 left-0 z-[1] flex items-center justify-center overflow-hidden md:left-64"
                     aria-hidden="true"
