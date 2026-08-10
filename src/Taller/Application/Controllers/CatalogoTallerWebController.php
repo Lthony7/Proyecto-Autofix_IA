@@ -20,8 +20,9 @@ class CatalogoTallerWebController extends Controller
     {
         return Inertia::render('Taller/Catalogos', [
             'vista' => $request->route('vista') ?? 'especialidades',
-            'especialidades' => EspecialidadEloquentModel::withCount(['mecanicos' => fn ($q) => $q->where('mecanico_especialidad.activo', true), 'servicios'])->orderBy('nombre')->get(),
-            'servicios' => ServicioEloquentModel::with('especialidad:id,nombre')->orderBy('nombre')->get()->map(fn ($s) => [
+            'especialidades' => EspecialidadEloquentModel::withCount(['mecanicos' => fn ($q) => $q->where('mecanico_especialidad.activo', true), 'servicios'])->orderBy('nombre')->paginate(10, ['*'], 'paginaEspecialidades')->withQueryString(),
+            'especialidadesOpciones' => EspecialidadEloquentModel::where('estado', 'activo')->orderBy('nombre')->get(['id', 'nombre']),
+            'servicios' => ServicioEloquentModel::with('especialidad:id,nombre')->orderBy('nombre')->paginate(10, ['*'], 'paginaServicios')->withQueryString()->through(fn ($s) => [
                 'id' => $s->id, 'especialidad' => $s->especialidad?->nombre, 'especialidadId' => $s->especialidad_id,
                 'codigo' => $s->codigo, 'nombre' => $s->nombre, 'descripcion' => $s->descripcion,
                 'duracionMinutos' => $s->duracion_minutos, 'precioBase' => $s->precio_base, 'estado' => $s->estado,

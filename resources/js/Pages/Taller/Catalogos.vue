@@ -26,8 +26,23 @@ interface Servicio {
 }
 const props = defineProps<{
     vista: string;
-    especialidades: Especialidad[];
-    servicios: Servicio[];
+    especialidades: {
+        data: Especialidad[];
+        current_page: number;
+        last_page: number;
+        prev_page_url: string | null;
+        next_page_url: string | null;
+        total: number;
+    };
+    especialidadesOpciones: { id: string; nombre: string }[];
+    servicios: {
+        data: Servicio[];
+        current_page: number;
+        last_page: number;
+        prev_page_url: string | null;
+        next_page_url: string | null;
+        total: number;
+    };
 }>();
 const { can } = usePermissions();
 const page = usePage();
@@ -47,9 +62,10 @@ const servicio = reactive({
     precioBase: "0.00",
 });
 const opciones = computed(() =>
-    props.especialidades
-        .filter((e) => e.estado === "activo")
-        .map((e) => ({ label: e.nombre, value: e.id })),
+    props.especialidadesOpciones.map((e) => ({
+        label: e.nombre,
+        value: e.id,
+    })),
 );
 const titulo = computed(() =>
     ({
@@ -211,7 +227,7 @@ function toggle(
                             <span class="text-right">Estado y acciones</span>
                         </div>
                         <div
-                            v-for="e in especialidades"
+                            v-for="e in especialidades.data"
                             :key="e.id"
                             class="grid gap-3 border-b border-default px-4 py-4 last:border-b-0 sm:grid-cols-[minmax(10rem,1fr)_minmax(10rem,1fr)_auto] sm:items-center"
                         >
@@ -258,11 +274,42 @@ function toggle(
                             </div>
                         </div>
                         <p
-                            v-if="!especialidades.length"
+                            v-if="!especialidades.data.length"
                             class="px-4 py-10 text-center text-muted"
                         >
                             No hay especialidades registradas.
                         </p>
+                    </div>
+                    <div
+                        class="flex flex-col items-center justify-between gap-3 sm:flex-row"
+                    >
+                        <p class="text-sm text-muted">
+                            Página {{ especialidades.current_page }} de
+                            {{ especialidades.last_page }} ·
+                            {{ especialidades.total }} especialidades
+                        </p>
+                        <div class="flex gap-2">
+                            <UButton
+                                label="Anterior"
+                                color="neutral"
+                                variant="outline"
+                                :disabled="!especialidades.prev_page_url"
+                                @click="
+                                    especialidades.prev_page_url &&
+                                        router.visit(especialidades.prev_page_url)
+                                "
+                            />
+                            <UButton
+                                label="Siguiente"
+                                color="neutral"
+                                variant="outline"
+                                :disabled="!especialidades.next_page_url"
+                                @click="
+                                    especialidades.next_page_url &&
+                                        router.visit(especialidades.next_page_url)
+                                "
+                            />
+                        </div>
                     </div>
                 </section>
 
@@ -367,7 +414,7 @@ function toggle(
                             <span class="text-right">Estado y acciones</span>
                         </div>
                         <div
-                            v-for="s in servicios"
+                            v-for="s in servicios.data"
                             :key="s.id"
                             class="grid gap-3 border-b border-default px-4 py-4 last:border-b-0 sm:grid-cols-[minmax(11rem,1fr)_minmax(10rem,1fr)_minmax(8rem,.7fr)_auto] sm:items-center"
                         >
@@ -422,11 +469,42 @@ function toggle(
                             </div>
                         </div>
                         <p
-                            v-if="!servicios.length"
+                            v-if="!servicios.data.length"
                             class="px-4 py-10 text-center text-muted"
                         >
                             No hay servicios registrados.
                         </p>
+                    </div>
+                    <div
+                        class="flex flex-col items-center justify-between gap-3 sm:flex-row"
+                    >
+                        <p class="text-sm text-muted">
+                            Página {{ servicios.current_page }} de
+                            {{ servicios.last_page }} · {{ servicios.total }}
+                            servicios
+                        </p>
+                        <div class="flex gap-2">
+                            <UButton
+                                label="Anterior"
+                                color="neutral"
+                                variant="outline"
+                                :disabled="!servicios.prev_page_url"
+                                @click="
+                                    servicios.prev_page_url &&
+                                        router.visit(servicios.prev_page_url)
+                                "
+                            />
+                            <UButton
+                                label="Siguiente"
+                                color="neutral"
+                                variant="outline"
+                                :disabled="!servicios.next_page_url"
+                                @click="
+                                    servicios.next_page_url &&
+                                        router.visit(servicios.next_page_url)
+                                "
+                            />
+                        </div>
                     </div>
                 </section>
             </div>
