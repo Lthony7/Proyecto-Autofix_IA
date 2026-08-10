@@ -40,7 +40,7 @@ function guardar() {
 }
 
 function guardarRoles() {
-    if (!props.usuario || props.esCliente) return;
+    if (!props.usuario) return;
     procesando.value = true;
     router.patch(route("usuarios.roles", props.usuario.id), { roleIds: state.roleIds }, {
         preserveScroll: true,
@@ -83,8 +83,8 @@ function guardarRoles() {
                     <template #header>
                         <div><h2 class="font-semibold">Rol</h2><p class="text-sm text-muted">Cada cuenta utiliza un único rol para mantener responsabilidades claras.</p></div>
                     </template>
-                    <UAlert v-if="esCliente" color="neutral" variant="subtle" icon="i-lucide-shield-check" title="Cuenta de cliente" description="El rol Cliente proviene del registro público y no puede convertirse en una cuenta interna." />
-                    <div v-else class="space-y-4">
+                    <UAlert v-if="esCliente" color="info" variant="subtle" icon="i-lucide-arrow-right-left" title="Cuenta de cliente" description="Esta cuenta se registró como Cliente. Puedes convertirla a un rol interno (Administrador, Recepcionista, Mecánico) seleccionándolo abajo." />
+                    <div class="space-y-4">
                         <UFormField label="Rol interno" required :error="errors.roleIds || errors.role_ids"><USelect v-model="rolSeleccionado" :items="opcionesRoles" class="w-full" /></UFormField>
                         <div class="flex justify-end"><UButton label="Guardar rol" :loading="procesando" @click="guardarRoles" /></div>
                     </div>

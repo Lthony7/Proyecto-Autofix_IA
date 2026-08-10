@@ -10,8 +10,7 @@ class ActualizarRolesUsuarioRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return ($this->user()?->can('roles.administrar') ?? false)
-            && ! ($this->route('usuario')?->hasRole('Cliente') ?? false);
+        return ($this->user()?->can('roles.administrar') ?? false);
     }
 
     protected function prepareForValidation(): void
