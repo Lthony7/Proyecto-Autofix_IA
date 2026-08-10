@@ -56,6 +56,16 @@ class DemoPresentacionSeeder extends Seeder
         ['Richard', 'Taco', 'FRENOS', false],
         ['Byron', 'Cachiguango', 'ELEC', false],
         ['Mario', 'Simbaña', 'SUSP', false],
+        ['Wilson', 'Chimbo', 'LLAN', false],
+        ['Édison', 'Casa', 'ESCP', false],
+        ['Darwin', 'Guamán', 'INYE', false],
+        ['Fabian', 'Yépez', 'CARP', false],
+        ['Xavier', 'Albán', 'VIDR', false],
+        ['Jhonny', 'Puma', 'ALAR', false],
+        ['Lenin', 'Gualpa', 'ENFR', false],
+        ['Cristian', 'Toapanta', 'HIBR', false],
+        ['Santiago', 'Simba', 'TRANS', false],
+        ['Vinicio', 'Bautista', 'CLIMA', false],
     ];
 
     private array $vehiculos = [
@@ -90,7 +100,7 @@ class DemoPresentacionSeeder extends Seeder
         $this->crearMecanicos($rolMecanico, $usuarioSistema);
         $this->crearClientes($rolCliente, $usuarioSistema);
 
-        $this->command?->info('Demo de presentación generada: 25 clientes, 10 mecánicos (1 principal), 2 recepcionistas.');
+        $this->command?->info('Demo de presentación generada: 25 clientes, 20 mecánicos (1 principal), 2 recepcionistas.');
     }
 
     private function crearRecepcionistas(RoleEloquentModel $rol, string $usuarioSistema): void
