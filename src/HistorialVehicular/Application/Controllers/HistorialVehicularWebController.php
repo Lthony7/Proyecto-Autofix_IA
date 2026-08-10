@@ -84,7 +84,8 @@ class HistorialVehicularWebController extends Controller
             abort_unless($esCliente, 403);
         }
         abort_unless(VehiculoEloquentModel::whereKey($vehiculo->id)->visiblePara($usuario)->exists(), 403);
-        if ($usuario->can('ordenes.ver_asignadas')) {
+        $puedeVerTodasLasOrdenes = $usuario->can('ordenes.administrar') || $usuario->hasAnyPermission(['ordenes.crear', 'ordenes.asignar', 'ordenes.entregar', 'ordenes.cancelar']);
+        if (! $puedeVerTodasLasOrdenes && $usuario->can('ordenes.ver_asignadas')) {
             abort_unless(OrdenTrabajoEloquentModel::where('vehiculo_id', $vehiculo->id)->visiblePara($usuario)->exists(), 403);
         }
 
