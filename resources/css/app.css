@@ -192,7 +192,7 @@ body {
 .app-content > [data-slot='root'] > [data-slot='body'] > :nth-child(3) { animation-delay: 80ms; }
 .app-content > [data-slot='root'] > [data-slot='body'] > :nth-child(n+4) { animation-delay: 110ms; }
 
-.app-content [data-slot='root']:has(> [data-slot='header']):has(> [data-slot='body']) {
+.app-content > [data-slot='root']:has(> [data-slot='body']) {
   overflow: hidden;
   height: 100svh;
   border-radius: 1rem;
@@ -203,7 +203,7 @@ body {
   transition: border-color 220ms ease, box-shadow 220ms ease, transform 220ms ease;
 }
 
-.app-content [data-slot='root']:has(> [data-slot='header']):has(> [data-slot='body']) > [data-slot='body'] {
+.app-content > [data-slot='root']:has(> [data-slot='body']) > [data-slot='body'] {
   min-height: 0;
   overflow-y: auto;
 }
