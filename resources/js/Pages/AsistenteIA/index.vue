@@ -7,7 +7,7 @@ interface Consulta{id:string;orden?:string;estadoOrden?:string;cliente:string;ve
 const props=defineProps<{consultas:{data:Consulta[];prev_page_url:string|null;next_page_url:string|null;from?:number;to?:number;total:number};filtros:{buscar:string;estado:string;prioridad:string;simulada:string;porPagina:number};stats:{total:number;pendientes:number;confirmadas:number;modificadas:number}}>()
 const{can}=usePermissions();const filtros=reactive({...props.filtros})
 function aplicar(){router.get(route('ia.index'),{buscar:filtros.buscar||undefined,estado:filtros.estado==='todos'?undefined:filtros.estado,prioridad:filtros.prioridad==='todas'?undefined:filtros.prioridad,simulada:filtros.simulada==='todas'?undefined:filtros.simulada,porPagina:filtros.porPagina},{preserveState:true,replace:true})}
-function limpiar(){Object.assign(filtros,{buscar:'',estado:'todos',prioridad:'todas',simulada:'todas',porPagina:25});aplicar()}
+function limpiar(){Object.assign(filtros,{buscar:'',estado:'todos',prioridad:'todas',simulada:'todas',porPagina:10});aplicar()}
 function colorPrioridad(valor:string):'error'|'warning'|'success'|'primary'{return['alta','critica'].includes(valor)?'error':valor==='media'?'warning':valor==='baja'?'success':'primary'}
 </script>
 <template><Head title="Diagnósticos IA"/><UDashboardPanel><template #header><UDashboardNavbar title="Diagnósticos IA"><template #right><UButton v-if="can('ia.solicitar')" label="Nuevo diagnóstico" icon="i-lucide-sparkles" @click="router.visit(route('ia.create'))"/></template></UDashboardNavbar></template><template #body><div class="space-y-5">

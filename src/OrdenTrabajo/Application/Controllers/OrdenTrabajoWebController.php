@@ -66,7 +66,7 @@ class OrdenTrabajoWebController extends Controller
             'pendientes' => (int) ($conteos['pendiente'] ?? 0),
         ];
 
-        $estado=$filtros['estado'] ?? null; $ordenes=OrdenTrabajoEloquentModel::with(['cliente:id,razon_social','vehiculo:id,placa,marca,modelo','asignaciones'=>fn($q)=>$q->where('activo',true)->with('mecanico:id,nombres,apellidos')])->visiblePara($request->user())->when($estado,fn($q)=>$q->where('estado',$estado))->latest('recibida_en')->paginate(15)->withQueryString();
+        $estado=$filtros['estado'] ?? null; $ordenes=OrdenTrabajoEloquentModel::with(['cliente:id,razon_social','vehiculo:id,placa,marca,modelo','asignaciones'=>fn($q)=>$q->where('activo',true)->with('mecanico:id,nombres,apellidos')])->visiblePara($request->user())->when($estado,fn($q)=>$q->where('estado',$estado))->latest('recibida_en')->paginate(10)->withQueryString();
         $ordenes->through(fn($o)=>$this->resumen($o)); return Inertia::render('OrdenTrabajo/index',['ordenes'=>$ordenes,'estado'=>$estado,'resumenEstados'=>$resumenEstados]);
     }
 

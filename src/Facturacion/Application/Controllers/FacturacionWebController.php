@@ -27,7 +27,7 @@ class FacturacionWebController extends Controller
         $buscar = trim((string) $request->input('buscar'));
         $facturas = FacturaOrdenEloquentModel::with('orden:id,numero')->whereHas('orden', fn ($q) => $q->visiblePara($request->user()))
             ->when($buscar, fn ($q) => $q->where(fn ($s) => $s->where('numero', 'ilike', "%{$buscar}%")->orWhere('cliente_nombre', 'ilike', "%{$buscar}%")->orWhere('cliente_documento', 'ilike', "%{$buscar}%")->orWhereHas('orden', fn ($o) => $o->where('numero', 'ilike', "%{$buscar}%"))))
-            ->latest('emitida_en')->paginate(20)->withQueryString();
+            ->latest('emitida_en')->paginate(10)->withQueryString();
         return Inertia::render('Facturacion/index', ['facturas' => $facturas, 'buscar' => $buscar]);
     }
 

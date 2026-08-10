@@ -53,7 +53,7 @@ class HistorialVehicularWebController extends Controller
             }))
             ->withCount(['ordenes as visitas' => fn (Builder $orden) => $orden->visiblePara($usuario)])
             ->orderBy('placa')
-            ->paginate(15)
+            ->paginate(10)
             ->withQueryString();
 
         $vehiculos->through(fn (VehiculoEloquentModel $vehiculo) => [
@@ -269,7 +269,7 @@ class HistorialVehicularWebController extends Controller
             ->when($filtros['hasta'] ?? null, fn (Builder $query, string $fecha) => $query->whereDate('created_at', '<=', $fecha))
             ->when($filtros['accion'] ?? null, fn (Builder $query, string $accion) => $query->where('accion', $accion))
             ->latest('created_at')
-            ->paginate(20)
+            ->paginate(10)
             ->withQueryString();
 
         $registros->through(fn (HistorialVehiculoAccionEloquentModel $registro) => [

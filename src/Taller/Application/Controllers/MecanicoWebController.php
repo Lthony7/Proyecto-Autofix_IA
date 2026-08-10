@@ -23,7 +23,7 @@ class MecanicoWebController extends Controller
         $buscar = trim((string) $request->input('buscar'));
         $mecanicos = MecanicoEloquentModel::with(['especialidades' => fn ($q) => $q->where('mecanico_especialidad.activo', true), 'disponibilidades' => fn ($q) => $q->where('activo', true)])
             ->when($buscar, fn ($q) => $q->where(fn ($s) => $s->where('nombres', 'ilike', "%{$buscar}%")->orWhere('apellidos', 'ilike', "%{$buscar}%")->orWhere('numero_documento', 'ilike', "%{$buscar}%")))
-            ->orderBy('apellidos')->paginate(15)->withQueryString();
+            ->orderBy('apellidos')->paginate(10)->withQueryString();
         $mecanicos->through(fn ($m) => $this->toArray($m));
         return Inertia::render('Taller/Mecanicos/index', ['mecanicos' => $mecanicos, 'buscar' => $buscar]);
     }

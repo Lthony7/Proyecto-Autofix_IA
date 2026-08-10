@@ -29,7 +29,7 @@ class ClienteWebController extends Controller
         }));
         $query->when(in_array($estado, ['activo', 'inactivo', 'archivado'], true), fn ($q) => $q->where('estado', $estado));
 
-        $clientes = $query->orderBy('razon_social')->paginate(15)->withQueryString();
+        $clientes = $query->orderBy('razon_social')->paginate(10)->withQueryString();
         $clientes->through(fn ($cliente) => $this->toArray($cliente));
 
         return Inertia::render('Cliente/index', [

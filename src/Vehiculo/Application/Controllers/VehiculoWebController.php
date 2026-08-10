@@ -31,7 +31,7 @@ class VehiculoWebController extends Controller
             }))
             ->when(in_array($estado, ['activo', 'inactivo', 'archivado'], true), fn ($q) => $q->where('estado', $estado))
             ->latest()
-            ->paginate(15)
+            ->paginate(10)
             ->withQueryString();
 
         $vehiculos->through(fn ($vehiculo) => $this->toArray($vehiculo));

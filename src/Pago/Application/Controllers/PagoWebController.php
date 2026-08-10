@@ -16,7 +16,7 @@ class PagoWebController extends Controller
                         ->orWhereHas('cliente', fn ($c) => $c->where('razon_social', 'ilike', "%{$buscar}%")));
             }))
             ->latest('pagado_en')
-            ->paginate(20)
+            ->paginate(10)
             ->withQueryString();
 
         $ordenesPendientes = collect();

@@ -44,7 +44,7 @@ class CitaWebController extends Controller
         $estado = $request->input('estado');
         $citas = CitaEloquentModel::with(['cliente:id,razon_social', 'vehiculo:id,placa,marca,modelo', 'servicio:id,nombre', 'mecanico:id,nombres,apellidos', 'orden:id,cita_id,numero'])
             ->visiblePara($request->user())->when(in_array($estado, ['pendiente', 'confirmada', 'reprogramada', 'atendida', 'cancelada', 'vencida'], true), fn ($q) => $q->where('estado', $estado))
-            ->orderByDesc('inicio')->paginate(15)->withQueryString();
+            ->orderByDesc('inicio')->paginate(10)->withQueryString();
         $citas->through(fn ($c) => $this->toArray($c));
         return Inertia::render('Cita/index', ['citas' => $citas, 'estado' => $estado]);
     }

@@ -67,7 +67,7 @@ class InventarioWebController extends Controller
                     ->whereColumn("stock_actual", "<=", "stock_minimo"),
             )
             ->orderBy("nombre")
-            ->paginate(15)
+            ->paginate(10)
             ->withQueryString();
         $gestiona = $request->user()->can("inventario.gestionar");
         $relaciones = [
@@ -172,7 +172,7 @@ class InventarioWebController extends Controller
             ->when($desde, fn($q) => $q->whereDate("created_at", ">=", $desde))
             ->when($hasta, fn($q) => $q->whereDate("created_at", "<=", $hasta))
             ->latest("created_at")
-            ->paginate(25)
+            ->paginate(10)
             ->withQueryString()
             ->through(
                 fn($m) => [

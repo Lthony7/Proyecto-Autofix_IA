@@ -34,7 +34,7 @@ class AsistenteIaWebController extends Controller
         $estado = $request->input('estado');
         $prioridad = $request->input('prioridad');
         $simulada = $request->input('simulada');
-        $porPagina = in_array((int) $request->input('porPagina'), [10, 25, 50, 100], true) ? (int) $request->input('porPagina') : 25;
+        $porPagina = in_array((int) $request->input('porPagina'), [10, 25, 50, 100], true) ? (int) $request->input('porPagina') : 10;
 
         $base = ConsultaIaEloquentModel::query()->visiblePara($request->user());
         $consultas = (clone $base)->with(['vehiculo:id,placa,marca,modelo', 'cliente:id,razon_social', 'especialidad:id,nombre', 'mecanicoSugerido:id,nombres,apellidos', 'orden:id,numero,estado'])
