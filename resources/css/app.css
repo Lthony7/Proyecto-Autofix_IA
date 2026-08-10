@@ -194,12 +194,18 @@ body {
 
 .app-content [data-slot='root']:has(> [data-slot='header']):has(> [data-slot='body']) {
   overflow: hidden;
+  height: 100svh;
   border-radius: 1rem;
   border-color: color-mix(in srgb, var(--ui-border) 88%, var(--ui-primary));
   background: color-mix(in srgb, var(--ui-bg) 91%, transparent);
   box-shadow: 0 12px 35px -28px color-mix(in srgb, var(--ui-primary) 55%, black);
   backdrop-filter: blur(10px);
   transition: border-color 220ms ease, box-shadow 220ms ease, transform 220ms ease;
+}
+
+.app-content [data-slot='root']:has(> [data-slot='header']):has(> [data-slot='body']) > [data-slot='body'] {
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .app-content [data-slot='root']:has(> [data-slot='header']):has(> [data-slot='body']):hover {
